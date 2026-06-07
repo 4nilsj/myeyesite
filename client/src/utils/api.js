@@ -20,5 +20,9 @@ export const fetchDetails = (placeId) =>
 export const fetchMarket = (pincode, radius = 3000, brand = '') =>
   api.get(`/market/${pincode}`, { params: { radius, brand } }).then(r => r.data);
 
-export const photoUrl = (ref, width = 400) =>
-  ref ? `/api/places/photo?ref=${ref}&width=${width}` : null;
+// Foursquare photos are direct URLs; Google photos go through the server proxy
+export const photoUrl = (ref, width = 400) => {
+  if (!ref) return null;
+  if (ref.startsWith('http')) return ref;
+  return `/api/places/photo?ref=${ref}&width=${width}`;
+};
