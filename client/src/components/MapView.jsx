@@ -1,154 +1,111 @@
-import { useState, useRef, useCallback } from 'react';
-import {
-  GoogleMap,
-  useJsApiLoader,
-  Marker,
-  Circle,
-  InfoWindow,
-  DirectionsRenderer,
-} from '@react-google-maps/api';
+import { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Circle, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 
-const LIBRARIES = ['places'];
-const MAP_STYLES = [
-  { featureType: 'poi', stylers: [{ visibility: 'off' }] }, // hide default POI clutter
-];
+// Fix Leaflet default icon paths broken by bundlers
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+});
+
+const centerIcon = L.divIcon({
+  className: '',
+  html: '<div style="width:16px;height:16px;background:#4F46E5;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.4)"></div>',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+});
+
+function placeIcon(icon) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="font-size:20px;line-height:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,0.35))">${icon}</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
+  });
+}
+
+// Recenter map when PIN code changes
+function RecenterMap({ center }) {
+  const map = useMap();
+  const prev = useRef(null);
+  useEffect(() => {
+    const key = `${center.lat},${center.lng}`;
+    if (key !== prev.current) {
+      map.setView([center.lat, center.lng], map.getZoom());
+      prev.current = key;
+    }
+  }, [center.lat, center.lng, map]);
+  return null;
+}
 
 export default function MapView({ center, radius, places, onRadiusChange }) {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_KEY,
-    libraries: LIBRARIES,
-  });
-
-  const [selected, setSelected] = useState(null);
-  const [directions, setDirections] = useState(null);
-  const mapRef = useRef(null);
-
-  const getDirections = useCallback((dest) => {
-    setDirections(null);
-    const svc = new window.google.maps.DirectionsService();
-    svc.route(
-      {
-        origin: new window.google.maps.LatLng(center.lat, center.lng),
-        destination: new window.google.maps.LatLng(dest.lat, dest.lng),
-        travelMode: window.google.maps.TravelMode.DRIVING,
-      },
-      (result, status) => {
-        if (status === 'OK') setDirections(result);
-      }
-    );
-  }, [center]);
-
-  if (loadError) return (
-    <div className="h-96 bg-red-50 rounded-2xl flex items-center justify-center text-red-500">
-      Map failed to load. Check your browser API key.
-    </div>
-  );
-
-  if (!isLoaded) return (
-    <div className="h-96 bg-gray-100 rounded-2xl skeleton" />
-  );
-
   return (
-    <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
-      <GoogleMap
-        mapContainerStyle={{ width: '100%', height: '460px' }}
-        center={center}
+    <div className="rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
+      <MapContainer
+        center={[center.lat, center.lng]}
         zoom={13}
-        onLoad={map => { mapRef.current = map; }}
-        options={{
-          styles: MAP_STYLES,
-          streetViewControl: true,
-          fullscreenControl: true,
-          mapTypeControl: false,
-          zoomControlOptions: {
-            position: window.google.maps.ControlPosition.RIGHT_CENTER,
-          },
-        }}
+        style={{ width: '100%', height: '460px' }}
+        scrollWheelZoom={true}
       >
-        {/* Search radius circle — editable so user can drag to resize */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+        />
+
+        <RecenterMap center={center} />
+
+        {/* Search radius circle */}
         <Circle
-          center={center}
+          center={[center.lat, center.lng]}
           radius={radius}
-          options={{
-            strokeColor: '#3B82F6',
-            strokeOpacity: 0.7,
-            strokeWeight: 2,
-            fillColor: '#3B82F6',
-            fillOpacity: 0.05,
-            editable: true,
-          }}
-          onRadiusChanged={function () {
-            if (typeof this.getRadius === 'function') {
-              onRadiusChange(Math.round(this.getRadius()));
-            }
-          }}
+          pathOptions={{ color: '#4F46E5', fillColor: '#4F46E5', fillOpacity: 0.06, weight: 2, dashArray: '6 4' }}
         />
 
         {/* Center pin */}
-        <Marker
-          position={center}
-          icon={{
-            url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(
-              '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%233B82F6"><circle cx="12" cy="12" r="8" fill="%233B82F6" stroke="white" stroke-width="2"/></svg>'
-            ),
-            scaledSize: { width: 24, height: 24 },
-          }}
-          title="PIN code center"
-        />
+        <Marker position={[center.lat, center.lng]} icon={centerIcon}>
+          <Popup>
+            <span className="text-xs font-semibold text-indigo-700">📍 Search centre</span>
+          </Popup>
+        </Marker>
 
         {/* Place markers */}
         {places.map(place => (
           <Marker
             key={place.placeId}
-            position={{ lat: place.lat, lng: place.lng }}
-            label={{ text: place.icon, fontSize: '18px' }}
-            onClick={() => setSelected(place)}
-          />
-        ))}
-
-        {/* Info window */}
-        {selected && (
-          <InfoWindow
-            position={{ lat: selected.lat, lng: selected.lng }}
-            onCloseClick={() => setSelected(null)}
+            position={[place.lat, place.lng]}
+            icon={placeIcon(place.icon)}
           >
-            <div className="text-sm max-w-[200px]">
-              <p className="font-bold text-gray-900">{selected.name}</p>
-              <p className="text-gray-500 text-xs mt-0.5">{selected.address}</p>
-              {selected.rating && (
-                <p className="text-yellow-500 text-xs mt-1">★ {selected.rating}</p>
-              )}
-              <div className="flex gap-2 mt-2">
-                <a
-                  href={selected.gmapsLink}
-                  target="_blank" rel="noreferrer"
-                  className="text-blue-600 text-xs hover:underline"
-                >
-                  Open Maps ↗
-                </a>
-                <button
-                  onClick={() => getDirections(selected)}
-                  className="text-green-600 text-xs hover:underline"
-                >
-                  Directions
-                </button>
+            <Popup minWidth={180}>
+              <div className="text-sm space-y-1">
+                <p className="font-bold text-gray-900 leading-snug">{place.name}</p>
+                <p className="text-gray-500 text-xs">{place.address}</p>
+                {place.rating && (
+                  <p className="text-amber-500 text-xs font-semibold">★ {place.rating}</p>
+                )}
+                <div className="flex gap-2 pt-1">
+                  <a href={place.gmapsLink} target="_blank" rel="noreferrer"
+                    className="text-xs text-indigo-600 hover:underline font-medium">
+                    Open in Maps ↗
+                  </a>
+                  {place.website && (
+                    <a href={place.website} target="_blank" rel="noreferrer"
+                      className="text-xs text-indigo-600 hover:underline font-medium">
+                      🌐 Website
+                    </a>
+                  )}
+                </div>
               </div>
-            </div>
-          </InfoWindow>
-        )}
+            </Popup>
+          </Marker>
+        ))}
+      </MapContainer>
 
-        {/* Directions overlay */}
-        {directions && (
-          <DirectionsRenderer
-            directions={directions}
-            options={{ suppressMarkers: true }}
-          />
-        )}
-      </GoogleMap>
-
-      {/* Radius control below map */}
-      <div className="bg-white px-4 py-3 flex items-center gap-3 border-t border-gray-100">
-        <span className="text-xs text-gray-500 shrink-0">Search radius</span>
+      {/* Radius slider */}
+      <div className="bg-white px-4 py-3 flex items-center gap-3 border-t border-slate-100">
+        <span className="text-xs text-slate-500 shrink-0">Search radius</span>
         <input
           type="range"
           min={500}
@@ -156,9 +113,9 @@ export default function MapView({ center, radius, places, onRadiusChange }) {
           step={500}
           value={radius}
           onChange={e => onRadiusChange(Number(e.target.value))}
-          className="flex-1 accent-blue-600"
+          className="flex-1 accent-indigo-600"
         />
-        <span className="text-xs font-semibold text-gray-700 shrink-0 w-16 text-right">
+        <span className="text-xs font-semibold text-slate-700 shrink-0 w-16 text-right">
           {radius >= 1000 ? `${(radius / 1000).toFixed(1)} km` : `${radius} m`}
         </span>
       </div>
