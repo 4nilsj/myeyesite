@@ -18,20 +18,16 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-export default function FilterBar({ filters, onChange, totalCount, filteredCount, radius = 5000, contactsReady = true }) {
+export default function FilterBar({ filters, onChange, totalCount, filteredCount, radius = 5000 }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const activeAdvancedCount = [
-    filters.hasWebsite,
-    filters.leadGen,
     filters.openNow,
     !filters.hideClosed,
     filters.maxDistance && filters.maxDistance !== radius,
   ].filter(Boolean).length;
 
   const handleResetFilters = () => {
-    onChange('hasWebsite', false);
-    onChange('leadGen', false);
     onChange('openNow', false);
     onChange('hideClosed', true);
     onChange('minRating', 0);
@@ -117,17 +113,6 @@ export default function FilterBar({ filters, onChange, totalCount, filteredCount
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Availability</p>
               <Toggle label="🟢 Open Now" checked={filters.openNow} onChange={v => onChange('openNow', v)} />
               <Toggle label="🚫 Hide Permanently Closed" checked={filters.hideClosed} onChange={v => onChange('hideClosed', v)} />
-            </div>
-
-            <div className="space-y-3.5">
-              <div className="flex items-center gap-2">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Online Presence</p>
-                {!contactsReady && (
-                  <span className="text-[10px] text-indigo-400 animate-pulse font-semibold">loading…</span>
-                )}
-              </div>
-              <Toggle label="🌐 Has Website" checked={filters.hasWebsite} onChange={v => onChange('hasWebsite', v)} />
-              <Toggle label="📞 Lead Gen (Website + Phone)" checked={filters.leadGen} onChange={v => onChange('leadGen', v)} />
             </div>
 
             <div className="space-y-2.5">

@@ -7,13 +7,11 @@ import MapView from './components/MapView';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import MarketResearch from './components/MarketResearch';
 import ErrorBoundary from './components/ErrorBoundary';
-import { geocodePin, fetchNearby, fetchContact, fetchDetails } from './utils/api';
+import { geocodePin, fetchNearby, fetchContact } from './utils/api';
 import { ALL_CATEGORIES } from './utils/categoryMap';
 import { debounce, calculateDistance } from './utils/debounce';
 
 const DEFAULT_FILTERS = {
-  hasWebsite: false,
-  leadGen: false,
   openNow: false,
   hideClosed: true,
   minRating: 0,
@@ -21,11 +19,9 @@ const DEFAULT_FILTERS = {
   searchQuery: '',
 };
 
-function applyFilters(places, filters, websiteOnly = false, openNowOnly = false) {
+function applyFilters(places, filters, openNowOnly = false) {
   return places.filter(p => {
     if (filters.hideClosed && p.permanentlyClosed) return false;
-    if ((filters.hasWebsite || websiteOnly) && !p.hasWebsite) return false;
-    if (filters.leadGen && !(p.hasWebsite && p.hasPhone)) return false;
     if ((filters.openNow || openNowOnly) && p.openNow !== true) return false;
     if (filters.minRating && (p.rating || 0) < filters.minRating) return false;
     if (filters.maxDistance && p.distance !== undefined && p.distance * 1000 > filters.maxDistance) return false;
@@ -58,15 +54,12 @@ export default function App() {
     catch { return []; }
   });
   const [showSaved, setShowSaved] = useState(false);
-  const [websiteOnly, setWebsiteOnly] = useState(false);
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [sort, setSort] = useState('default'); // 'default' | 'rating' | 'distance'
   const [currentPage, setCurrentPage] = useState(1);
-  const [contactsReady, setContactsReady] = useState(true);
-  const [contactFetchId, setContactFetchId] = useState(0);
+  const [exportLoading, setExportLoading] = useState(false);
   const radiusTimerRef = useRef(null);
   const debouncedCategoryRef = useRef(null);
-  const pageContactFetchRef = useRef({ cancelled: false });
   const userChangedRadiusRef = useRef(false);
 
   const pageSize = 12;
@@ -94,9 +87,8 @@ export default function App() {
   // Reset pagination to page 1 when category, filters, sorting, radius, or places list change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, filters.hasWebsite, filters.leadGen, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius, websiteOnly, openNowOnly]);
+  }, [activeCategory, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius, openNowOnly]);
 
-  // Contact fetch effect is placed after paginatedPlaces is computed (see below)
 
   const doSearch = useCallback(async (pin) => {
     setLoading(true);
@@ -140,7 +132,6 @@ export default function App() {
         }));
 
       setPlaces(allPlaces);
-      setContactFetchId(id => id + 1);
     } catch (e) {
       setError(e.response?.data?.error || 'Search failed. Check the PIN code and try again.');
     } finally {
@@ -168,7 +159,6 @@ export default function App() {
             distance: calculateDistance(geoData.lat, geoData.lng, p.lat, p.lng)
           }));
         setPlaces(allPlaces);
-        setContactFetchId(id => id + 1);
       } catch (e) {
         setError('Failed to fetch places at new radius');
       } finally {
@@ -209,7 +199,7 @@ export default function App() {
   const categoryFiltered = activeCategory === 'all'
     ? places
     : places.filter(p => p.category === activeCategory);
-  let visiblePlaces = applyFilters(categoryFiltered, filters, websiteOnly, openNowOnly);
+  let visiblePlaces = applyFilters(categoryFiltered, filters, openNowOnly);
 
   // Apply sorting
   if (sort === 'rating') {
@@ -222,62 +212,48 @@ export default function App() {
   const totalPages = Math.ceil(visiblePlaces.length / pageSize);
   const paginatedPlaces = visiblePlaces.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  // Fetch website + phone for the 12 visible cards; re-runs when page/category/sort/filters change
-  // or when a new search loads (contactFetchId increments)
-  const paginatedIds = paginatedPlaces.map(p => p.placeId).join(',');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const toFetch = paginatedPlaces.filter(p => !p.detailsLoaded);
-    if (!toFetch.length) { setContactsReady(true); return; }
+  // Export — fetches website + phone on-demand for all visible results, then downloads
+  const exportResults = async (format) => {
+    if (!visiblePlaces.length) { alert('No results to export'); return; }
 
-    pageContactFetchRef.current.cancelled = true;
-    const ctx = { cancelled: false };
-    pageContactFetchRef.current = ctx;
-    setContactsReady(false);
-    let completed = 0;
+    setExportLoading(true);
+    try {
+      // Fetch contacts for all visible places (3 concurrent, 100ms stagger)
+      const contactMap = {};
+      await new Promise(resolve => {
+        const CONCURRENCY = 3;
+        let i = 0, active = 0, completed = 0;
+        const next = () => {
+          while (active < CONCURRENCY && i < visiblePlaces.length) {
+            const place = visiblePlaces[i++];
+            active++;
+            fetchContact(place.placeId)
+              .then(d => { contactMap[place.placeId] = d; })
+              .catch(() => {})
+              .finally(() => {
+                active--;
+                completed++;
+                if (completed === visiblePlaces.length) resolve();
+                else next();
+              });
+          }
+        };
+        next();
+      });
 
-    toFetch.forEach((place, i) => {
-      setTimeout(() => {
-        if (ctx.cancelled) return;
-        fetchContact(place.placeId)
-          .then(d => {
-            if (ctx.cancelled) return;
-            setPlaces(prev => prev.map(p =>
-              p.placeId === place.placeId
-                ? { ...p, hasWebsite: d.hasWebsite, hasPhone: d.hasPhone, website: d.website, phone: d.phone, detailsLoaded: true }
-                : p
-            ));
-          })
-          .catch(() => {})
-          .finally(() => {
-            if (ctx.cancelled) return;
-            completed++;
-            if (completed === toFetch.length) setContactsReady(true);
-          });
-      }, i * 100);
-    });
-
-    return () => { ctx.cancelled = true; };
-  // paginatedIds is the stable string key representing which cards are visible
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paginatedIds]);
-
-  const exportResults = (format) => {
-    if (!visiblePlaces.length) {
-      alert('No results to export');
-      return;
-    }
-
-    const data = visiblePlaces.map(p => ({
-      name: p.name,
-      category: p.label || p.category,
-      address: p.address,
-      phone: p.phone || '',
-      website: p.website || '',
-      rating: p.rating || '',
-      reviews: p.userRatingsTotal || 0,
-      gmapsLink: p.gmapsLink,
-    }));
+      const data = visiblePlaces.map(p => {
+        const c = contactMap[p.placeId] || {};
+        return {
+          name: p.name,
+          category: p.label || p.category,
+          address: p.address,
+          phone: c.phone || '',
+          website: c.website || '',
+          rating: p.rating || '',
+          reviews: p.userRatingsTotal || 0,
+          gmapsLink: p.gmapsLink,
+        };
+      });
 
     if (format === 'csv') {
       const headers = Object.keys(data[0]);
@@ -290,6 +266,9 @@ export default function App() {
       downloadFile(csv, 'places.csv', 'text/csv');
     } else {
       downloadFile(JSON.stringify(data, null, 2), 'places.json', 'application/json');
+    }
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -323,7 +302,7 @@ export default function App() {
               📍 <span className="hidden sm:inline">PinCode Explorer</span><span className="sm:hidden">PCX</span>
             </h1>
             <div className="flex-1 max-w-2xl">
-              <SearchBar onSearch={doSearch} loading={loading} websiteOnly={websiteOnly} onWebsiteOnlyChange={setWebsiteOnly} openNowOnly={openNowOnly} onOpenNowOnlyChange={setOpenNowOnly} />
+              <SearchBar onSearch={doSearch} loading={loading} openNowOnly={openNowOnly} onOpenNowOnlyChange={setOpenNowOnly} />
             </div>
             <div className="flex gap-2 shrink-0">
               <button
@@ -429,7 +408,6 @@ export default function App() {
               totalCount={categoryFiltered.length}
               filteredCount={visiblePlaces.length}
               radius={radius}
-              contactsReady={contactsReady}
             />
 
             {/* Analytics dashboard with ErrorBoundary */}
@@ -453,13 +431,13 @@ export default function App() {
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => exportResults('csv')}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors">
-                    📊 Export CSV
+                  <button onClick={() => exportResults('csv')} disabled={exportLoading}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors disabled:opacity-50">
+                    {exportLoading ? '⏳ Fetching…' : '📊 Export CSV'}
                   </button>
-                  <button onClick={() => exportResults('json')}
-                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors">
-                    📄 Export JSON
+                  <button onClick={() => exportResults('json')} disabled={exportLoading}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors disabled:opacity-50">
+                    {exportLoading ? '⏳ Fetching…' : '📄 Export JSON'}
                   </button>
                 </div>
               </div>

@@ -136,30 +136,6 @@ export default function ResultCard({ place, onSave, isSaved }) {
           )}
         </div>
 
-        {/* Contact chips — shown once background fetch populated them */}
-        {(place.website || place.phone) && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {place.website && (
-              <a href={place.website} target="_blank" rel="noreferrer"
-                className="text-[11px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2.5 py-1
-                           rounded-full font-semibold transition-colors truncate max-w-[120px]">
-                🌐 {place.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
-              </a>
-            )}
-            {place.phone && (
-              <a href={`tel:${place.phone}`}
-                className="text-[11px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1 rounded-full font-semibold transition-colors">
-                📞 Call
-              </a>
-            )}
-            {place.phone && (
-              <a href={`https://wa.me/${place.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-                className="text-[11px] bg-green-50 text-green-700 hover:bg-green-100 px-2.5 py-1 rounded-full font-semibold transition-colors">
-                💬 WA
-              </a>
-            )}
-          </div>
-        )}
 
         {/* Expanded section */}
         {expanded && (
