@@ -66,6 +66,7 @@ export default function App() {
   const radiusTimerRef = useRef(null);
   const debouncedCategoryRef = useRef(null);
   const bgFetchRef = useRef({ cancelled: false });
+  const userChangedRadiusRef = useRef(false);
 
   const pageSize = 12;
 
@@ -160,9 +161,14 @@ export default function App() {
       const geo = await geocodePin(pin);
       setGeoData(geo);
 
+      // Use the PIN area's natural radius; mark as search-set so the radius effect skips
+      const searchRadius = geo.suggestedRadius || 5000;
+      userChangedRadiusRef.current = false;
+      setRadius(searchRadius);
+
       // Fetch all categories in parallel
       const results = await Promise.allSettled(
-        ALL_CATEGORIES.map(cat => fetchNearby(geo.lat, geo.lng, radius, cat))
+        ALL_CATEGORIES.map(cat => fetchNearby(geo.lat, geo.lng, searchRadius, cat))
       );
 
       const allPlaces = results
@@ -180,11 +186,12 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [radius, startBackgroundDetailFetch]);
+  }, [startBackgroundDetailFetch]);
 
-  // Debounced re-fetch when radius changes
+  // Debounced re-fetch when the user changes the radius (not when doSearch sets it)
   useEffect(() => {
     if (!geoData || !pincode) return;
+    if (!userChangedRadiusRef.current) return;
 
     if (radiusTimerRef.current) clearTimeout(radiusTimerRef.current);
     radiusTimerRef.current = setTimeout(async () => {
@@ -209,6 +216,11 @@ export default function App() {
       }
     }, 500);
   }, [radius, geoData, pincode]);
+
+  const handleRadiusChange = useCallback((newRadius) => {
+    userChangedRadiusRef.current = true;
+    setRadius(newRadius);
+  }, []);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -387,7 +399,7 @@ export default function App() {
                 center={mapCenter}
                 radius={radius}
                 places={visiblePlaces}
-                onRadiusChange={setRadius}
+                onRadiusChange={handleRadiusChange}
               />
             </ErrorBoundary>
 

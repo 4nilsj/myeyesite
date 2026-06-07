@@ -37,6 +37,16 @@ router.get('/:pincode', async (req, res) => {
 
     const get = (type) => components.find(c => c.types.includes(type))?.long_name || null;
 
+    // Derive a search radius from the viewport bounding box of the PIN area
+    const vp = result.geometry.viewport;
+    const dLat = (vp.northeast.lat - lat) * Math.PI / 180;
+    const dLng = (vp.northeast.lng - lng) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(lat * Math.PI / 180) * Math.cos(vp.northeast.lat * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+    const distToCorner = 6371000 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    // Round to nearest 500 m, clamp between 1 km and 25 km
+    const suggestedRadius = Math.max(1000, Math.min(25000, Math.round(distToCorner / 500) * 500));
+
     const responseData = {
       lat,
       lng,
@@ -45,6 +55,7 @@ router.get('/:pincode', async (req, res) => {
       district: get('administrative_area_level_3') || get('administrative_area_level_2'),
       state: get('administrative_area_level_1'),
       formattedAddress: result.formatted_address,
+      suggestedRadius,
     };
 
     // Cache results for 30 days (2592000 seconds)
