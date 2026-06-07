@@ -1,0 +1,21 @@
+import axios from 'axios';
+
+const api = axios.create({ baseURL: '/api' });
+
+export const geocodePin = (pincode) =>
+  api.get(`/geocode/${pincode}`).then(r => r.data);
+
+export const reverseGeocode = (lat, lng) =>
+  api.get('/geocode/reverse/lookup', { params: { lat, lng } }).then(r => r.data);
+
+export const fetchNearby = (lat, lng, radius, category) =>
+  api.get('/places/nearby', { params: { lat, lng, radius, category } }).then(r => r.data);
+
+export const fetchDetails = (placeId) =>
+  api.get(`/places/details/${placeId}`).then(r => r.data);
+
+export const fetchMarket = (pincode, radius = 3000, brand = '') =>
+  api.get(`/market/${pincode}`, { params: { radius, brand } }).then(r => r.data);
+
+export const photoUrl = (ref, width = 400) =>
+  ref ? `/api/places/photo?ref=${ref}&width=${width}` : null;
