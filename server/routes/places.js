@@ -43,9 +43,24 @@ router.get('/nearby', async (req, res) => {
       return res.json(emptyResult);
     }
 
+    // Fetch up to 3 pages (60 results max) using next_page_token
+    let rawResults = [...response.data.results];
+    let nextPageToken = response.data.next_page_token;
+
+    while (nextPageToken && rawResults.length < 60) {
+      // Google requires a short delay before the next_page_token becomes valid
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const pageResp = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
+        params: { pagetoken: nextPageToken, key: process.env.GOOGLE_SERVER_API_KEY },
+      });
+      if (pageResp.data.status !== 'OK') break;
+      rawResults = rawResults.concat(pageResp.data.results || []);
+      nextPageToken = pageResp.data.next_page_token;
+    }
+
     const meta = CATEGORY_MAP[category] || { icon: '📍', label: category };
 
-    const places = response.data.results.map(p => ({
+    const places = rawResults.map(p => ({
       placeId: p.place_id,
       name: p.name,
       lat: p.geometry.location.lat,
@@ -69,9 +84,16 @@ router.get('/nearby', async (req, res) => {
       detailsLoaded: false,
     }));
 
-    const responseData = { places, total: places.length, category };
+    // Deduplicate by place_id in case pages overlap
+    const seen = new Set();
+    const uniquePlaces = places.filter(p => {
+      if (seen.has(p.placeId)) return false;
+      seen.add(p.placeId);
+      return true;
+    });
 
-    // Cache nearby search for 24 hours
+    const responseData = { places: uniquePlaces, total: uniquePlaces.length, category };
+
     await cache.set(cacheKey, responseData, 24 * 60 * 60);
 
     res.json(responseData);
