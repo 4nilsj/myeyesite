@@ -270,16 +270,12 @@ export default function App() {
 
     const data = visiblePlaces.map(p => ({
       name: p.name,
+      category: p.label || p.category,
       address: p.address,
-      rating: p.rating || 'N/A',
+      phone: p.phone || '',
+      website: p.website || '',
+      rating: p.rating || '',
       reviews: p.userRatingsTotal || 0,
-      distance: p.distance ? `${p.distance.toFixed(2)} km` : 'N/A',
-      openNow: p.openNow ? 'Yes' : 'No',
-      priceLevel: p.priceLevel || 'N/A',
-      phone: p.phone || 'N/A',
-      website: p.website || 'N/A',
-      lat: p.lat,
-      lng: p.lng,
       gmapsLink: p.gmapsLink,
     }));
 
