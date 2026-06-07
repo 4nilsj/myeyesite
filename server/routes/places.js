@@ -185,6 +185,42 @@ router.get('/details/:placeId', detailLimiter, async (req, res) => {
   }
 });
 
+// ─── Contact fetch — website + phone only ($0.020/call vs $0.025 for full details)
+router.get('/contact/:placeId', detailLimiter, async (req, res) => {
+  const { placeId } = req.params;
+  const cacheKey = `contact:${placeId}`;
+
+  try {
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      console.log(`[Cache] Hit for contact: ${placeId}`);
+      return res.json(cached);
+    }
+
+    const response = await axios.get(`${PLACES_BASE}/details/json`, {
+      params: {
+        place_id: placeId,
+        fields: 'website,formatted_phone_number,international_phone_number',
+        key: process.env.GOOGLE_SERVER_API_KEY,
+      },
+    });
+
+    if (response.data.status !== 'OK') {
+      return res.status(400).json({ error: `Google API error: ${response.data.status}` });
+    }
+
+    const p = response.data.result;
+    const phone = p.formatted_phone_number || p.international_phone_number || null;
+    const result = { placeId, website: p.website || null, phone, hasWebsite: !!p.website, hasPhone: !!phone };
+
+    await cache.set(cacheKey, result, 7 * 24 * 60 * 60);
+    res.json(result);
+  } catch (err) {
+    console.error('[contact]', err.message);
+    res.status(500).json({ error: 'Contact fetch failed' });
+  }
+});
+
 // ─── Photo Proxy (keeps API key server-side) ────────────────────────────────────
 router.get('/photo', async (req, res) => {
   const { ref, width = 600 } = req.query;
