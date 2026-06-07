@@ -7,7 +7,7 @@ import MapView from './components/MapView';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import MarketResearch from './components/MarketResearch';
 import ErrorBoundary from './components/ErrorBoundary';
-import { geocodePin, fetchNearby } from './utils/api';
+import { geocodePin, fetchNearby, fetchDetails } from './utils/api';
 import { ALL_CATEGORIES } from './utils/categoryMap';
 import { debounce, calculateDistance } from './utils/debounce';
 
@@ -60,8 +60,10 @@ export default function App() {
   const [showSaved, setShowSaved] = useState(false);
   const [sort, setSort] = useState('default'); // 'default' | 'rating' | 'distance'
   const [currentPage, setCurrentPage] = useState(1);
+  const [contactsReady, setContactsReady] = useState(true);
   const radiusTimerRef = useRef(null);
   const debouncedCategoryRef = useRef(null);
+  const bgFetchRef = useRef({ cancelled: false });
 
   const pageSize = 12;
 
@@ -89,6 +91,49 @@ export default function App() {
   useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, filters.hasWebsite, filters.leadGen, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius]);
+
+  const startBackgroundDetailFetch = useCallback((allPlaces) => {
+    bgFetchRef.current.cancelled = true;
+    const ctx = { cancelled: false };
+    bgFetchRef.current = ctx;
+
+    const toFetch = allPlaces.filter(p => !p.detailsLoaded);
+    if (!toFetch.length) { setContactsReady(true); return; }
+
+    setContactsReady(false);
+    const CONCURRENCY = 5;
+    let i = 0;
+    let active = 0;
+    let completed = 0;
+
+    const next = () => {
+      if (ctx.cancelled) return;
+      if (active === 0 && i >= toFetch.length) { setContactsReady(true); return; }
+      while (active < CONCURRENCY && i < toFetch.length && !ctx.cancelled) {
+        const place = toFetch[i++];
+        active++;
+        fetchDetails(place.placeId)
+          .then(d => {
+            if (ctx.cancelled) return;
+            setPlaces(prev => prev.map(p =>
+              p.placeId === place.placeId
+                ? { ...p, hasWebsite: !!d.website, hasPhone: !!d.phone, detailsLoaded: true }
+                : p
+            ));
+          })
+          .catch(() => {})
+          .finally(() => {
+            if (ctx.cancelled) return;
+            active--;
+            completed++;
+            if (completed === toFetch.length) setContactsReady(true);
+            else next();
+          });
+      }
+    };
+
+    next();
+  }, []);
 
   const doSearch = useCallback(async (pin) => {
     setLoading(true);
@@ -127,12 +172,13 @@ export default function App() {
         }));
 
       setPlaces(allPlaces);
+      startBackgroundDetailFetch(allPlaces);
     } catch (e) {
       setError(e.response?.data?.error || 'Search failed. Check the PIN code and try again.');
     } finally {
       setLoading(false);
     }
-  }, [radius]);
+  }, [radius, startBackgroundDetailFetch]);
 
   // Debounced re-fetch when radius changes
   useEffect(() => {
@@ -153,6 +199,7 @@ export default function App() {
             distance: calculateDistance(geoData.lat, geoData.lng, p.lat, p.lng)
           }));
         setPlaces(allPlaces);
+        startBackgroundDetailFetch(allPlaces);
       } catch (e) {
         setError('Failed to fetch places at new radius');
       } finally {
@@ -352,6 +399,7 @@ export default function App() {
               totalCount={categoryFiltered.length}
               filteredCount={visiblePlaces.length}
               radius={radius}
+              contactsReady={contactsReady}
             />
 
             {/* Analytics dashboard with ErrorBoundary */}

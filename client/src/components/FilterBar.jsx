@@ -19,7 +19,7 @@ function Toggle({ label, checked, onChange }) {
   );
 }
 
-export default function FilterBar({ filters, onChange, totalCount, filteredCount, radius = 5000 }) {
+export default function FilterBar({ filters, onChange, totalCount, filteredCount, radius = 5000, contactsReady = true }) {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Compute active advanced filters count
@@ -146,7 +146,12 @@ export default function FilterBar({ filters, onChange, totalCount, filteredCount
 
             {/* Toggles col 2 */}
             <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">Online Presence</h4>
+              <div className="flex items-center gap-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400">Online Presence</h4>
+                {!contactsReady && (
+                  <span className="text-[10px] text-blue-500 animate-pulse font-medium">loading…</span>
+                )}
+              </div>
               <Toggle
                 label="🌐 Has Website"
                 checked={filters.hasWebsite}
