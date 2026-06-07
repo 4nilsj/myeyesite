@@ -27,9 +27,8 @@ export default function AnalyticsDashboard({ places }) {
         label: CATEGORY_MAP[key].label,
         color: BAR_COLORS[idx % BAR_COLORS.length],
         total: items.length,
-        withWebsite: items.filter(p => p.hasWebsite).length,
-        withPhone: items.filter(p => p.hasPhone).length,
         openNow: items.filter(p => p.openNow === true).length,
+        rated: rated.length,
         avgRating: rated.length
           ? (rated.reduce((s, p) => s + p.rating, 0) / rated.length).toFixed(1)
           : null,
@@ -40,8 +39,11 @@ export default function AnalyticsDashboard({ places }) {
   const present = stats.filter(s => s.total > 0);
   const missing = stats.filter(s => s.total === 0);
   const maxCount = Math.max(...present.map(s => s.total), 1);
-  const totalWithWeb = places.filter(p => p.hasWebsite).length;
   const totalOpen = places.filter(p => p.openNow === true).length;
+  const totalRated = places.filter(p => p.rating).length;
+  const avgRatingAll = totalRated
+    ? (places.filter(p => p.rating).reduce((s, p) => s + p.rating, 0) / totalRated).toFixed(1)
+    : null;
 
   if (!places.length) return null;
 
@@ -53,8 +55,8 @@ export default function AnalyticsDashboard({ places }) {
         <div className="grid grid-cols-3 gap-3">
           {[
             { label: 'Places found', value: places.length, icon: '📍', color: 'bg-indigo-50 text-indigo-700' },
-            { label: 'Have website', value: totalWithWeb, icon: '🌐', color: 'bg-violet-50 text-violet-700' },
             { label: 'Open now', value: totalOpen, icon: '🟢', color: 'bg-emerald-50 text-emerald-700' },
+            { label: 'Avg rating', value: avgRatingAll ? `★ ${avgRatingAll}` : '—', icon: '⭐', color: 'bg-amber-50 text-amber-700' },
           ].map(({ label, value, icon, color }) => (
             <div key={label} className={`${color} rounded-xl p-3 text-center`}>
               <div className="text-xl font-black">{value}</div>
@@ -87,7 +89,6 @@ export default function AnalyticsDashboard({ places }) {
                 <span className="text-xs font-semibold text-slate-700">{s.icon} {s.label}</span>
                 <div className="flex items-center gap-2.5 text-[11px] text-slate-400">
                   <span className="font-bold text-slate-600">{s.total}</span>
-                  {s.withWebsite > 0 && <span>🌐 {s.withWebsite}</span>}
                   {s.openNow > 0 && <span className="text-emerald-600 font-medium">🟢 {s.openNow}</span>}
                   {s.avgRating && <span className="text-amber-500">★ {s.avgRating}</span>}
                 </div>
