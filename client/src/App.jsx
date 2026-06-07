@@ -105,6 +105,7 @@ export default function App() {
 
     setContactsReady(false);
     const CONCURRENCY = 3;
+    const DELAY_MS = 80; // spread requests to avoid rate-limit bursts
     let i = 0;
     let active = 0;
     let completed = 0;
@@ -115,23 +116,27 @@ export default function App() {
       while (active < CONCURRENCY && i < toFetch.length && !ctx.cancelled) {
         const place = toFetch[i++];
         active++;
-        fetchDetails(place.placeId)
-          .then(d => {
-            if (ctx.cancelled) return;
-            setPlaces(prev => prev.map(p =>
-              p.placeId === place.placeId
-                ? { ...p, hasWebsite: !!d.website, hasPhone: !!d.phone, website: d.website || null, phone: d.phone || null, detailsLoaded: true }
-                : p
-            ));
-          })
-          .catch(() => {})
-          .finally(() => {
-            if (ctx.cancelled) return;
-            active--;
-            completed++;
-            if (completed === toFetch.length) setContactsReady(true);
-            else next();
-          });
+        const slot = active; // capture for closure
+        setTimeout(() => {
+          if (ctx.cancelled) { active--; return; }
+          fetchDetails(place.placeId)
+            .then(d => {
+              if (ctx.cancelled) return;
+              setPlaces(prev => prev.map(p =>
+                p.placeId === place.placeId
+                  ? { ...p, hasWebsite: !!d.website, hasPhone: !!d.phone, website: d.website || null, phone: d.phone || null, detailsLoaded: true }
+                  : p
+              ));
+            })
+            .catch(() => {})
+            .finally(() => {
+              if (ctx.cancelled) return;
+              active--;
+              completed++;
+              if (completed === toFetch.length) setContactsReady(true);
+              else next();
+            });
+        }, slot * DELAY_MS);
       }
     };
 
