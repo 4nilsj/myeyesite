@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { reverseGeocode } from '../utils/api';
 
-export default function SearchBar({ onSearch, loading }) {
+export default function SearchBar({ onSearch, loading, websiteOnly = false, onWebsiteOnlyChange }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
@@ -79,7 +79,22 @@ export default function SearchBar({ onSearch, loading }) {
           {loading ? 'Searching…' : 'Search'}
         </button>
       </form>
-      {error && <p className="text-red-500 text-sm mt-2 ml-1">{error}</p>}
+      <div className="flex items-center gap-4 mt-2 ml-1">
+        {error && <p className="text-red-500 text-sm">{error}</p>}
+        {onWebsiteOnlyChange && (
+          <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={websiteOnly}
+              onChange={e => onWebsiteOnlyChange(e.target.checked)}
+              className="accent-blue-600 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className={websiteOnly ? 'text-blue-600 font-medium' : ''}>
+              🌐 Show only places with a website
+            </span>
+          </label>
+        )}
+      </div>
     </div>
   );
 }
