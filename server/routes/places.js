@@ -3,11 +3,12 @@ const axios = require('axios');
 const router = express.Router();
 const CATEGORY_MAP = require('../utils/categoryMap');
 const cache = require('../utils/redisCache');
+const { searchLimiter, detailLimiter } = require('../middleware/rateLimit');
 
 const PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 
 // ─── Nearby Search ─────────────────────────────────────────────────────────────
-router.get('/nearby', async (req, res) => {
+router.get('/nearby', searchLimiter, async (req, res) => {
   const { lat, lng, radius = 5000, category = 'all' } = req.query;
 
   if (!lat || !lng) return res.status(400).json({ error: 'lat and lng are required' });
@@ -104,7 +105,7 @@ router.get('/nearby', async (req, res) => {
 });
 
 // ─── Place Details (called on-demand when user clicks a card) ──────────────────
-router.get('/details/:placeId', async (req, res) => {
+router.get('/details/:placeId', detailLimiter, async (req, res) => {
   const { placeId } = req.params;
   const cacheKey = `details:${placeId}`;
 

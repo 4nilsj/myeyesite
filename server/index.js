@@ -21,7 +21,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() 
 
 // ─── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/geocode', searchLimiter, geocodeRouter);
-app.use('/api/places', searchLimiter, placesRouter);
+app.use('/api/places', placesRouter);   // rate limits applied per-route inside the router
 app.use('/api/market', searchLimiter, marketRouter);
 
 // ─── Global error handler ──────────────────────────────────────────────────────

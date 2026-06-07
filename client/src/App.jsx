@@ -102,7 +102,7 @@ export default function App() {
     if (!toFetch.length) { setContactsReady(true); return; }
 
     setContactsReady(false);
-    const CONCURRENCY = 5;
+    const CONCURRENCY = 3;
     let i = 0;
     let active = 0;
     let completed = 0;
