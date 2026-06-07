@@ -120,7 +120,7 @@ export default function App() {
             if (ctx.cancelled) return;
             setPlaces(prev => prev.map(p =>
               p.placeId === place.placeId
-                ? { ...p, hasWebsite: !!d.website, hasPhone: !!d.phone, detailsLoaded: true }
+                ? { ...p, hasWebsite: !!d.website, hasPhone: !!d.phone, website: d.website || null, phone: d.phone || null, detailsLoaded: true }
                 : p
             ));
           })
@@ -316,20 +316,29 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ─── Header ─────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
+      <header className="bg-white/95 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-4">
-            <h1 className="text-xl font-black text-blue-600 shrink-0">📍 PinCode Explorer</h1>
+            <h1 className="text-lg font-black gradient-text shrink-0 tracking-tight whitespace-nowrap">
+              📍 <span className="hidden sm:inline">PinCode Explorer</span><span className="sm:hidden">PCX</span>
+            </h1>
             <div className="flex-1 max-w-2xl">
               <SearchBar onSearch={doSearch} loading={loading} websiteOnly={websiteOnly} onWebsiteOnlyChange={setWebsiteOnly} openNowOnly={openNowOnly} onOpenNowOnlyChange={setOpenNowOnly} />
             </div>
             <div className="flex gap-2 shrink-0">
               <button
                 onClick={() => setShowSaved(s => !s)}
-                className={`text-sm px-3 py-1.5 rounded-xl border transition-colors
-                  ${showSaved ? 'bg-yellow-50 border-yellow-300 text-yellow-700' : 'bg-white border-gray-200 text-gray-600 hover:border-yellow-300'}`}
+                className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-xl border font-semibold transition-all
+                  ${showSaved
+                    ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
+                    : 'bg-white border-slate-200 text-slate-600 hover:border-amber-300 hover:text-amber-600'}`}
               >
-                ★ Saved ({saved.length})
+                ★
+                {saved.length > 0 && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${showSaved ? 'bg-amber-200 text-amber-800' : 'bg-slate-100 text-slate-600'}`}>
+                    {saved.length}
+                  </span>
+                )}
               </button>
             </div>
           </div>
@@ -340,17 +349,17 @@ export default function App() {
 
         {/* ─── PIN info bar ──────────────────────────────────────────── */}
         {geoData && (
-          <div className="flex flex-wrap items-center gap-3 text-sm">
-            <span className="bg-blue-100 text-blue-800 font-semibold px-3 py-1 rounded-full">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="bg-indigo-100 text-indigo-800 font-bold text-sm px-3 py-1 rounded-full">
               📮 {pincode}
             </span>
-            <span className="text-gray-600">
+            <span className="text-slate-600 text-sm">
               {geoData.locality}{geoData.district ? `, ${geoData.district}` : ''}, {geoData.state}
             </span>
-            {/* PIN history pills */}
             {history.filter(h => h !== pincode).slice(0, 4).map(h => (
               <button key={h} onClick={() => doSearch(h)}
-                className="text-xs text-gray-400 hover:text-blue-600 px-2 py-0.5 rounded-full border border-gray-200 hover:border-blue-300 transition-colors">
+                className="text-xs text-slate-400 hover:text-indigo-600 px-2.5 py-1 rounded-full border border-slate-200
+                           hover:border-indigo-300 hover:bg-indigo-50 transition-all font-medium">
                 {h}
               </button>
             ))}
@@ -359,12 +368,12 @@ export default function App() {
 
         {/* ─── Tab switcher ─────────────────────────────────────────── */}
         {geoData && (
-          <div className="flex gap-2 border-b border-gray-200">
+          <div className="flex gap-1 border-b border-slate-200">
             {['results', 'market'].map(t => (
               <button key={t} onClick={() => setTab(t)}
-                className={`pb-2 px-1 text-sm font-semibold border-b-2 transition-colors capitalize
-                  ${tab === t ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>
-                {t === 'results' ? `🗺️ Results` : `🔬 Market Research`}
+                className={`pb-2.5 px-2 text-sm font-semibold border-b-2 transition-all duration-200
+                  ${tab === t ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}>
+                {t === 'results' ? '🗺️ Results' : '🔬 Market Research'}
               </button>
             ))}
           </div>
@@ -381,7 +390,18 @@ export default function App() {
         {loading && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="skeleton h-48 rounded-2xl" />
+              <div key={i} className="bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm">
+                <div className="skeleton h-36" />
+                <div className="p-4 space-y-2.5">
+                  <div className="skeleton h-4 rounded-full w-3/4" />
+                  <div className="skeleton h-3 rounded-full w-full" />
+                  <div className="skeleton h-3 rounded-full w-1/2" />
+                  <div className="flex gap-2 mt-3">
+                    <div className="skeleton h-7 rounded-xl flex-1" />
+                    <div className="skeleton h-7 rounded-xl flex-1" />
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -419,34 +439,27 @@ export default function App() {
 
             {/* Sort & Export Controls */}
             {visiblePlaces.length > 0 && (
-              <div className="flex flex-wrap gap-3 items-center justify-between bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex gap-2">
-                  <span className="text-sm font-semibold text-gray-600 self-center">Sort:</span>
+              <div className="flex flex-wrap gap-3 items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-100 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mr-1">Sort</span>
                   {['default', 'rating', 'distance'].map(opt => (
-                    <button
-                      key={opt}
-                      onClick={() => setSort(opt)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    <button key={opt} onClick={() => setSort(opt)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all
                         ${sort === opt
-                          ? 'bg-blue-600 text-white shadow-sm'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                    >
+                          ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
                       {opt === 'default' ? '📋 Default' : opt === 'rating' ? '⭐ Rating' : '📍 Distance'}
                     </button>
                   ))}
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    onClick={() => exportResults('csv')}
-                    className="px-4 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 text-sm font-medium transition-colors"
-                  >
-                    📊 CSV
+                  <button onClick={() => exportResults('csv')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition-colors">
+                    📊 Export CSV
                   </button>
-                  <button
-                    onClick={() => exportResults('json')}
-                    className="px-4 py-2 rounded-lg bg-purple-100 text-purple-700 hover:bg-purple-200 text-sm font-medium transition-colors"
-                  >
-                    📄 JSON
+                  <button onClick={() => exportResults('json')}
+                    className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-violet-50 text-violet-700 hover:bg-violet-100 border border-violet-200 transition-colors">
+                    📄 Export JSON
                   </button>
                 </div>
               </div>
@@ -511,11 +524,14 @@ export default function App() {
                 )}
               </div>
             ) : places.length > 0 ? (
-              <div className="text-center py-16 text-gray-400">
-                <p className="text-4xl mb-3">🔍</p>
-                <p className="font-medium">No results match the active filters</p>
+              <div className="text-center py-16">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-3xl">🔍</span>
+                </div>
+                <p className="font-semibold text-slate-700 mb-1">No results match the active filters</p>
+                <p className="text-sm text-slate-400 mb-4">Try relaxing your search criteria</p>
                 <button onClick={() => setFilters({ ...DEFAULT_FILTERS, maxDistance: radius })}
-                  className="mt-3 text-sm text-blue-600 hover:underline">
+                  className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 hover:underline">
                   Clear all filters
                 </button>
               </div>
@@ -533,7 +549,10 @@ export default function App() {
         {/* ─── SAVED PANEL ──────────────────────────────────────────── */}
         {showSaved && (
           <div>
-            <h2 className="text-lg font-bold mb-3">★ Saved Places</h2>
+            <h2 className="text-base font-bold text-amber-700 mb-3 flex items-center gap-2">
+            <span className="text-xl">★</span> Saved Places
+            <span className="text-xs font-semibold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-full">{saved.length}</span>
+          </h2>
             {saved.length === 0 ? (
               <p className="text-gray-400 text-sm">No saved places yet. Click ☆ on any card to save.</p>
             ) : (
@@ -553,17 +572,26 @@ export default function App() {
 
         {/* ─── Empty state ──────────────────────────────────────────── */}
         {!loading && !geoData && !error && (
-          <div className="text-center py-24">
-            <p className="text-6xl mb-4">📍</p>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Discover any area in India</h2>
-            <p className="text-gray-500 mb-6">
-              Enter a 6-digit PIN code to find hotels, hospitals, restaurants, schools, and more
+          <div className="text-center py-24 px-4">
+            <div className="w-24 h-24 bg-gradient-to-br from-indigo-100 to-violet-100 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <span className="text-5xl">📍</span>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Discover any area in India</h2>
+            <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
+              Enter a 6-digit PIN code to explore hotels, hospitals, restaurants, schools, and more — with market insights and contact details.
             </p>
-            <div className="flex flex-wrap justify-center gap-2 text-sm text-gray-400">
-              {['110001', '400001', '411001', '600001', '560001'].map(pin => (
+            <div className="flex flex-wrap justify-center gap-2">
+              {[
+                { pin: '110001', name: 'Delhi' },
+                { pin: '400001', name: 'Mumbai' },
+                { pin: '411001', name: 'Pune' },
+                { pin: '600001', name: 'Chennai' },
+                { pin: '560001', name: 'Bengaluru' },
+              ].map(({ pin, name }) => (
                 <button key={pin} onClick={() => doSearch(pin)}
-                  className="px-3 py-1.5 border border-gray-200 rounded-full hover:border-blue-400 hover:text-blue-600 transition-colors">
-                  Try {pin}
+                  className="px-4 py-2 border border-slate-200 rounded-full text-sm font-medium text-slate-500
+                             hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all">
+                  {name} <span className="text-slate-400 text-xs">{pin}</span>
                 </button>
               ))}
             </div>

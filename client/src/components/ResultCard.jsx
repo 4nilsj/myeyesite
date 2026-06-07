@@ -3,129 +3,193 @@ import { fetchDetails, photoUrl } from '../utils/api';
 
 const PRICE = ['', '₹', '₹₹', '₹₹₹', '₹₹₹₹'];
 
-function Stars({ rating }) {
+function RatingStars({ rating }) {
   if (!rating) return null;
+  const filled = Math.round(rating);
   return (
-    <span className="text-yellow-500 font-bold text-sm">★ {rating.toFixed(1)}</span>
+    <div className="flex items-center gap-1">
+      <div className="flex gap-0.5">
+        {[1,2,3,4,5].map(i => (
+          <svg key={i} className={`w-3 h-3 ${i <= filled ? 'text-amber-400' : 'text-slate-200'}`} fill="currentColor" viewBox="0 0 20 20">
+            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+          </svg>
+        ))}
+      </div>
+      <span className="text-[11px] text-slate-500 font-medium">
+        {rating.toFixed(1)}
+        {' '}
+        <span className="text-slate-400">
+          ({new Intl.NumberFormat('en-IN', { notation: 'compact' }).format(0)})
+        </span>
+      </span>
+    </div>
   );
 }
 
 export default function ResultCard({ place, onSave, isSaved }) {
   const [expanded, setExpanded] = useState(false);
   const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [imgError, setImgError] = useState(false);
 
   const handleToggle = async () => {
     if (!expanded && !detail) {
-      setLoading(true);
+      setDetailLoading(true);
       try {
         const data = await fetchDetails(place.placeId);
         setDetail(data);
       } catch (err) {
-        const msg = err.response?.data?.error || err.message || 'Could not load details';
-        setDetail({ error: msg });
+        setDetail({ error: err.response?.data?.error || 'Could not load details' });
       } finally {
-        setLoading(false);
+        setDetailLoading(false);
       }
     }
-    setExpanded(prev => !prev);
-  };
-
-  const copyLink = () => {
-    navigator.clipboard.writeText(place.gmapsLink);
+    setExpanded(v => !v);
   };
 
   const photo = place.photoRef && !imgError ? photoUrl(place.photoRef, 600) : null;
   const d = detail;
+  const filled = place.rating ? Math.round(place.rating) : 0;
 
   return (
-    <div className={`place-card bg-white rounded-2xl shadow-sm border overflow-hidden
-      ${place.permanentlyClosed ? 'opacity-60 border-red-200' : 'border-gray-100'}`}>
+    <div className={`place-card bg-white rounded-2xl border overflow-hidden flex flex-col
+      ${place.permanentlyClosed ? 'border-red-100 opacity-70' : 'border-slate-100 shadow-sm'}`}>
 
-      {/* Photo */}
-      {photo && (
-        <img
-          src={photo}
-          alt={place.name}
-          onError={() => setImgError(true)}
-          className="w-full h-32 object-cover"
-          loading="lazy"
-        />
-      )}
-
-      <div className="p-4">
-        {/* Status badge */}
-        {place.permanentlyClosed && (
-          <span className="inline-block text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full mb-2">
-            🔴 Permanently Closed
-          </span>
+      {/* Photo / placeholder */}
+      <div className="relative">
+        {photo ? (
+          <img src={photo} alt={place.name} onError={() => setImgError(true)}
+            className="w-full h-36 object-cover" loading="lazy" />
+        ) : (
+          <div className="h-24 bg-gradient-to-br from-indigo-50 via-violet-50 to-slate-50 flex items-center justify-center">
+            <span className="text-5xl opacity-20">{place.icon}</span>
+          </div>
         )}
 
-        {/* Header row */}
-        <div className="flex justify-between items-start gap-2">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-gray-900 text-sm leading-snug truncate">
-              {place.icon} {place.name}
-            </h3>
-            <p className="text-gray-400 text-xs mt-0.5 truncate">{place.address}</p>
-            {place.distance && (
-              <p className="text-blue-600 text-xs font-medium mt-1">📍 {place.distance.toFixed(2)} km away</p>
-            )}
+        {/* Category badge */}
+        <span className="absolute top-2 left-2 text-[10px] font-bold bg-white/90 backdrop-blur-sm
+                         text-slate-600 px-2 py-0.5 rounded-full shadow-sm border border-white/60">
+          {place.icon} {place.label}
+        </span>
+
+        {/* Save button */}
+        <button onClick={() => onSave(place)}
+          title={isSaved ? 'Saved' : 'Save'}
+          className={`absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full
+                      text-sm shadow-sm transition-all duration-200 backdrop-blur-sm
+                      ${isSaved ? 'bg-amber-400 text-white shadow-amber-200' : 'bg-white/90 text-slate-400 hover:text-amber-500 hover:bg-amber-50'}`}>
+          {isSaved ? '★' : '☆'}
+        </button>
+
+        {place.permanentlyClosed && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <span className="text-xs font-bold text-white bg-red-500 px-3 py-1 rounded-full shadow">
+              Permanently Closed
+            </span>
           </div>
-          <div className="text-right shrink-0">
-            <Stars rating={place.rating} />
+        )}
+      </div>
+
+      <div className="p-4 flex flex-col flex-1">
+        {/* Name */}
+        <h3 className="font-bold text-gray-900 text-sm leading-snug line-clamp-2 mb-1">
+          {place.name}
+        </h3>
+
+        {/* Rating row */}
+        {place.rating && (
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="flex gap-0.5">
+              {[1,2,3,4,5].map(i => (
+                <svg key={i} className={`w-3 h-3 ${i <= filled ? 'text-amber-400' : 'text-slate-200'}`} fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                </svg>
+              ))}
+            </div>
+            <span className="text-[11px] text-slate-500 font-medium">{place.rating.toFixed(1)}</span>
+            <span className="text-[11px] text-slate-400">
+              ({place.userRatingsTotal > 999
+                ? `${(place.userRatingsTotal / 1000).toFixed(1)}k`
+                : place.userRatingsTotal})
+            </span>
             {place.priceLevel > 0 && (
-              <p className="text-xs text-gray-400">{PRICE[place.priceLevel]}</p>
+              <span className="text-[11px] text-slate-400 ml-auto">{PRICE[place.priceLevel]}</span>
             )}
           </div>
+        )}
+
+        {/* Address */}
+        <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 mb-2.5">{place.address}</p>
+
+        {/* Status + distance chips */}
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {place.distance && (
+            <span className="text-[11px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-medium">
+              📍 {place.distance.toFixed(1)} km
+            </span>
+          )}
+          {place.openNow !== null && !place.permanentlyClosed && (
+            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold
+              ${place.openNow ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-600'}`}>
+              {place.openNow ? '🟢 Open' : '🔴 Closed'}
+            </span>
+          )}
         </div>
 
-        {/* Open/closed status */}
-        {place.openNow !== null && (
-          <p className={`text-xs font-medium mt-1 ${place.openNow ? 'text-green-600' : 'text-red-500'}`}>
-            {place.openNow ? '🟢 Open Now' : '🔴 Currently Closed'}
-          </p>
+        {/* Contact chips — shown once background fetch populated them */}
+        {(place.website || place.phone) && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {place.website && (
+              <a href={place.website} target="_blank" rel="noreferrer"
+                className="text-[11px] bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-2.5 py-1
+                           rounded-full font-semibold transition-colors truncate max-w-[120px]">
+                🌐 {place.website.replace(/^https?:\/\/(www\.)?/, '').split('/')[0]}
+              </a>
+            )}
+            {place.phone && (
+              <a href={`tel:${place.phone}`}
+                className="text-[11px] bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-2.5 py-1 rounded-full font-semibold transition-colors">
+                📞 Call
+              </a>
+            )}
+            {place.phone && (
+              <a href={`https://wa.me/${place.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                className="text-[11px] bg-green-50 text-green-700 hover:bg-green-100 px-2.5 py-1 rounded-full font-semibold transition-colors">
+                💬 WA
+              </a>
+            )}
+          </div>
         )}
 
-        {/* Expanded detail section */}
+        {/* Expanded section */}
         {expanded && (
-          <div className="mt-3 pt-3 border-t border-gray-100 space-y-2">
-            {loading && (
-              <div className="skeleton h-16 rounded-lg" />
-            )}
+          <div className="pt-3 border-t border-slate-100 space-y-2.5 mb-3">
+            {detailLoading && <div className="skeleton h-14 rounded-xl" />}
             {d?.error && (
-              <p className="text-red-400 text-xs">{d.error}</p>
+              <p className="text-xs text-red-500 bg-red-50 p-2.5 rounded-xl">{d.error}</p>
             )}
             {d && !d.error && (
               <>
-                {d.phone && (
-                  <div className="flex gap-3">
-                    <a href={`tel:${d.phone}`} className="text-sm text-blue-600 hover:underline">
-                      📞 {d.phone}
-                    </a>
-                    <a
-                      href={`https://wa.me/${d.phone.replace(/\D/g, '')}`}
-                      target="_blank" rel="noreferrer"
-                      className="text-sm text-green-600 hover:underline"
-                    >
-                      💬 WhatsApp
-                    </a>
+                {/* Show phone/website in expanded too if not already shown above */}
+                {!place.phone && d.phone && (
+                  <div className="flex gap-2">
+                    <a href={`tel:${d.phone}`} className="text-xs text-indigo-600 hover:underline font-medium">📞 {d.phone}</a>
+                    <a href={`https://wa.me/${d.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
+                      className="text-xs text-green-600 hover:underline font-medium">💬 WhatsApp</a>
                   </div>
                 )}
-                {d.website && (
-                  <a
-                    href={d.website}
-                    target="_blank" rel="noreferrer"
-                    className="block text-sm text-blue-600 hover:underline truncate"
-                  >
+                {!place.website && d.website && (
+                  <a href={d.website} target="_blank" rel="noreferrer"
+                    className="block text-xs text-indigo-600 hover:underline truncate font-medium">
                     🌐 {d.website.replace(/^https?:\/\//, '')}
                   </a>
                 )}
                 {d.openingHours && (
-                  <details className="text-xs text-gray-500 cursor-pointer">
-                    <summary className="font-medium text-gray-700">🕐 Opening Hours</summary>
-                    <ul className="mt-1 space-y-0.5 ml-4">
+                  <details className="text-xs cursor-pointer group">
+                    <summary className="font-semibold text-slate-700 group-open:text-indigo-600 transition-colors select-none">
+                      🕐 Opening Hours
+                    </summary>
+                    <ul className="mt-1.5 ml-4 space-y-0.5 text-slate-500">
                       {d.openingHours.map((h, i) => <li key={i}>{h}</li>)}
                     </ul>
                   </details>
@@ -133,10 +197,12 @@ export default function ResultCard({ place, onSave, isSaved }) {
                 {d.reviews?.length > 0 && (
                   <div className="space-y-1.5">
                     {d.reviews.map((r, i) => (
-                      <div key={i} className="bg-gray-50 rounded-lg p-2 text-xs text-gray-600">
-                        <span className="text-yellow-500">{'★'.repeat(r.rating)}</span>
-                        <span className="text-gray-400 ml-1">· {r.time}</span>
-                        <p className="mt-0.5">{r.text}</p>
+                      <div key={i} className="bg-slate-50 rounded-xl p-2.5 text-xs text-slate-600">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <span className="text-amber-400 text-[10px]">{'★'.repeat(r.rating)}{'☆'.repeat(5-r.rating)}</span>
+                          <span className="text-slate-400">· {r.author} · {r.time}</span>
+                        </div>
+                        <p className="leading-relaxed">{r.text}</p>
                       </div>
                     ))}
                   </div>
@@ -146,40 +212,24 @@ export default function ResultCard({ place, onSave, isSaved }) {
           </div>
         )}
 
-        {/* Action buttons */}
-        <div className="mt-3 flex gap-1.5">
-          <a
-            href={place.gmapsLink}
-            target="_blank" rel="noreferrer"
-            className="flex-1 text-center text-xs font-medium bg-blue-50 text-blue-700
-                       py-2 rounded-lg hover:bg-blue-100 transition-colors"
-          >
-            📍 Maps
+        <div className="flex-1" />
+
+        {/* Action bar */}
+        <div className="flex gap-1.5 mt-2">
+          <a href={place.gmapsLink} target="_blank" rel="noreferrer"
+            className="flex-1 text-center text-xs font-semibold py-2 rounded-xl
+                       bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors">
+            🗺️ Maps
           </a>
-          <button
-            onClick={handleToggle}
-            className="flex-1 text-xs font-medium bg-gray-100 text-gray-700
-                       py-2 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            {loading ? '⏳' : expanded ? 'Less ▲' : 'Details ▼'}
+          <button onClick={handleToggle}
+            className={`flex-1 text-xs font-semibold py-2 rounded-xl transition-colors
+              ${expanded ? 'bg-slate-200 text-slate-700 hover:bg-slate-300' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            {detailLoading ? '⏳' : expanded ? 'Less ▲' : 'Details ▼'}
           </button>
-          <button
-            onClick={copyLink}
-            title="Copy Google Maps link"
-            className="px-3 text-xs bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition-colors"
-          >
+          <button onClick={() => navigator.clipboard.writeText(place.gmapsLink)}
+            title="Copy link"
+            className="px-2.5 bg-slate-100 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors text-sm">
             📋
-          </button>
-          <button
-            onClick={() => onSave(place)}
-            title={isSaved ? 'Saved' : 'Save place'}
-            className={`px-3 text-xs rounded-lg transition-colors
-              ${isSaved
-                ? 'bg-yellow-100 text-yellow-600'
-                : 'bg-gray-100 text-gray-600 hover:bg-yellow-50 hover:text-yellow-600'
-              }`}
-          >
-            {isSaved ? '★' : '☆'}
           </button>
         </div>
       </div>
