@@ -56,13 +56,10 @@ export default function App() {
   const [showSaved, setShowSaved] = useState(false);
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [sort, setSort] = useState('default'); // 'default' | 'rating' | 'distance'
-  const [currentPage, setCurrentPage] = useState(1);
   const [exportLoading, setExportLoading] = useState(false);
   const radiusTimerRef = useRef(null);
   const debouncedCategoryRef = useRef(null);
   const userChangedRadiusRef = useRef(false);
-
-  const pageSize = 12;
 
   // Persist saved + history
   useEffect(() => {
@@ -84,10 +81,6 @@ export default function App() {
     setFilters(prev => ({ ...prev, maxDistance: radius }));
   }, [radius]);
 
-  // Reset pagination to page 1 when category, filters, sorting, radius, or places list change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius, openNowOnly]);
 
 
   const doSearch = useCallback(async (pin) => {
@@ -208,9 +201,6 @@ export default function App() {
     visiblePlaces = [...visiblePlaces].sort((a, b) => (a.distance || 0) - (b.distance || 0));
   }
 
-  // Slicing for pagination
-  const totalPages = Math.ceil(visiblePlaces.length / pageSize);
-  const paginatedPlaces = visiblePlaces.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   // Export — fetches website + phone on-demand for all visible results, then downloads
   const exportResults = async (format) => {
@@ -444,10 +434,10 @@ export default function App() {
             )}
 
             {/* Results grid */}
-            {paginatedPlaces.length > 0 ? (
+            {visiblePlaces.length > 0 ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {paginatedPlaces.map(place => (
+                  {visiblePlaces.map(place => (
                     <ResultCard
                       key={place.placeId}
                       place={place}
@@ -457,49 +447,6 @@ export default function App() {
                   ))}
                 </div>
 
-                {/* Pagination Controls */}
-                {totalPages > 1 && (
-                  <div className="flex justify-center items-center gap-2 mt-8 bg-white p-4 rounded-2xl border border-gray-150 shadow-sm">
-                    <button
-                      disabled={currentPage === 1}
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                      className="px-3.5 py-2 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-all select-none"
-                    >
-                      ◀ Prev
-                    </button>
-                    <div className="flex items-center gap-1.5">
-                      {Array.from({ length: totalPages }).map((_, i) => {
-                        const page = i + 1;
-                        if (totalPages > 6 && page !== 1 && page !== totalPages && Math.abs(currentPage - page) > 1) {
-                          if (page === 2 || page === totalPages - 1) {
-                            return <span key={page} className="text-gray-400 px-1 font-bold">...</span>;
-                          }
-                          return null;
-                        }
-                        return (
-                          <button
-                            key={page}
-                            onClick={() => setCurrentPage(page)}
-                            className={`w-9 h-9 rounded-xl text-sm font-semibold transition-all select-none ${
-                              currentPage === page
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'border border-gray-200 hover:bg-gray-50 text-gray-700'
-                            }`}
-                          >
-                            {page}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <button
-                      disabled={currentPage === totalPages}
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                      className="px-3.5 py-2 rounded-xl border border-gray-200 text-sm font-semibold hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white transition-all select-none"
-                    >
-                      Next ▶
-                    </button>
-                  </div>
-                )}
               </div>
             ) : places.length > 0 ? (
               <div className="text-center py-16">
