@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { reverseGeocode } from '../utils/api';
 
-export default function SearchBar({ onSearch, loading, websiteOnly = false, onWebsiteOnlyChange }) {
+export default function SearchBar({ onSearch, loading, websiteOnly = false, onWebsiteOnlyChange, openNowOnly = false, onOpenNowOnlyChange }) {
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const [locating, setLocating] = useState(false);
@@ -79,7 +79,7 @@ export default function SearchBar({ onSearch, loading, websiteOnly = false, onWe
           {loading ? 'Searching…' : 'Search'}
         </button>
       </form>
-      <div className="flex items-center gap-4 mt-2 ml-1">
+      <div className="flex flex-wrap items-center gap-4 mt-2 ml-1">
         {error && <p className="text-red-500 text-sm">{error}</p>}
         {onWebsiteOnlyChange && (
           <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
@@ -90,7 +90,20 @@ export default function SearchBar({ onSearch, loading, websiteOnly = false, onWe
               className="accent-blue-600 w-3.5 h-3.5 cursor-pointer"
             />
             <span className={websiteOnly ? 'text-blue-600 font-medium' : ''}>
-              🌐 Show only places with a website
+              🌐 Website only
+            </span>
+          </label>
+        )}
+        {onOpenNowOnlyChange && (
+          <label className="flex items-center gap-1.5 text-sm text-gray-500 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={openNowOnly}
+              onChange={e => onOpenNowOnlyChange(e.target.checked)}
+              className="accent-green-600 w-3.5 h-3.5 cursor-pointer"
+            />
+            <span className={openNowOnly ? 'text-green-600 font-medium' : ''}>
+              🟢 Open now only
             </span>
           </label>
         )}

@@ -21,12 +21,12 @@ const DEFAULT_FILTERS = {
   searchQuery: '',
 };
 
-function applyFilters(places, filters, websiteOnly = false) {
+function applyFilters(places, filters, websiteOnly = false, openNowOnly = false) {
   return places.filter(p => {
     if (filters.hideClosed && p.permanentlyClosed) return false;
     if ((filters.hasWebsite || websiteOnly) && !p.hasWebsite) return false;
     if (filters.leadGen && !(p.hasWebsite && p.hasPhone)) return false;
-    if (filters.openNow && p.openNow !== true) return false;
+    if ((filters.openNow || openNowOnly) && p.openNow !== true) return false;
     if (filters.minRating && (p.rating || 0) < filters.minRating) return false;
     if (filters.maxDistance && p.distance !== undefined && p.distance * 1000 > filters.maxDistance) return false;
     if (filters.searchQuery) {
@@ -59,6 +59,7 @@ export default function App() {
   });
   const [showSaved, setShowSaved] = useState(false);
   const [websiteOnly, setWebsiteOnly] = useState(false);
+  const [openNowOnly, setOpenNowOnly] = useState(false);
   const [sort, setSort] = useState('default'); // 'default' | 'rating' | 'distance'
   const [currentPage, setCurrentPage] = useState(1);
   const [contactsReady, setContactsReady] = useState(true);
@@ -91,7 +92,7 @@ export default function App() {
   // Reset pagination to page 1 when category, filters, sorting, radius, or places list change
   useEffect(() => {
     setCurrentPage(1);
-  }, [activeCategory, filters.hasWebsite, filters.leadGen, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius, websiteOnly]);
+  }, [activeCategory, filters.hasWebsite, filters.leadGen, filters.openNow, filters.hideClosed, filters.minRating, filters.maxDistance, filters.searchQuery, sort, places.length, radius, websiteOnly, openNowOnly]);
 
   const startBackgroundDetailFetch = useCallback((allPlaces) => {
     bgFetchRef.current.cancelled = true;
@@ -236,7 +237,7 @@ export default function App() {
   const categoryFiltered = activeCategory === 'all'
     ? places
     : places.filter(p => p.category === activeCategory);
-  let visiblePlaces = applyFilters(categoryFiltered, filters, websiteOnly);
+  let visiblePlaces = applyFilters(categoryFiltered, filters, websiteOnly, openNowOnly);
 
   // Apply sorting
   if (sort === 'rating') {
@@ -312,7 +313,7 @@ export default function App() {
           <div className="flex items-center justify-between gap-4">
             <h1 className="text-xl font-black text-blue-600 shrink-0">📍 PinCode Explorer</h1>
             <div className="flex-1 max-w-2xl">
-              <SearchBar onSearch={doSearch} loading={loading} websiteOnly={websiteOnly} onWebsiteOnlyChange={setWebsiteOnly} />
+              <SearchBar onSearch={doSearch} loading={loading} websiteOnly={websiteOnly} onWebsiteOnlyChange={setWebsiteOnly} openNowOnly={openNowOnly} onOpenNowOnlyChange={setOpenNowOnly} />
             </div>
             <div className="flex gap-2 shrink-0">
               <button
