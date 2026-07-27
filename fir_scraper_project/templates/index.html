@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FIR PDF Explorer & Intelligence Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --bg-main: #0f172a;
+        --bg-card: #1e293b;
+        --border-color: #334155;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --accent-blue: #38bdf8;
+        --accent-blue-hover: #0284c7;
+        --badge-bg: #1e3a8a;
+        --badge-text: #93c5fd;
+        --table-hover: #26334d;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: var(--bg-main);
+        color: var(--text-primary);
+        line-height: 1.5;
+        padding: 24px;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .header-card {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .title-section h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .title-section p {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        margin-top: 4px;
+      }
+      .stats-badge {
+        background: #1e3a8a;
+        color: #93c5fd;
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        border: 1px solid #2563eb;
+      }
+      .filter-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+      }
+      .filter-form {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .input-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        min-width: 200px;
+      }
+      .input-group label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.05em;
+      }
+      input, select {
+        padding: 10px 14px;
+        background: #0f172a;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        outline: none;
+        transition: border-color 0.2s ease;
+      }
+      input:focus, select:focus {
+        border-color: var(--accent-blue);
+      }
+      .btn {
+        padding: 10px 18px;
+        background: var(--accent-blue);
+        color: #0f172a;
+        font-weight: 600;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+      .btn:hover {
+        background: var(--accent-blue-hover);
+        color: white;
+      }
+      .btn-secondary {
+        background: #334155;
+        color: var(--text-primary);
+      }
+      .btn-secondary:hover {
+        background: #475569;
+      }
+      .table-container {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        overflow-x: auto;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        font-size: 0.875rem;
+      }
+      th {
+        background: #0f172a;
+        padding: 14px 16px;
+        font-weight: 600;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+        white-space: nowrap;
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+      }
+      td {
+        padding: 14px 16px;
+        border-bottom: 1px solid #33415540;
+        color: var(--text-primary);
+        vertical-align: top;
+      }
+      tr:last-child td {
+        border-bottom: none;
+      }
+      tr:hover td {
+        background-color: var(--table-hover);
+      }
+      a.file-link {
+        color: var(--accent-blue);
+        text-decoration: none;
+        font-weight: 600;
+      }
+      a.file-link:hover {
+        text-decoration: underline;
+      }
+      .text-subtle {
+        color: var(--text-secondary);
+        font-size: 0.8rem;
+      }
+      .chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+      }
+      .chip {
+        background: #334155;
+        color: #cbd5e1;
+        padding: 2px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+      }
+      .badge-ocr {
+        background: #7c2d12;
+        color: #fdba74;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+      }
+      .badge-text {
+        background: #064e3b;
+        color: #6ee7b7;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+      }
+      .badge-act {
+        background: #1e1b4b;
+        color: #c7d2fe;
+        border: 1px solid #4338ca;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        display: inline-block;
+        max-width: 250px;
+        word-wrap: break-word;
+        line-height: 1.35;
+      }
+      /* Station badges */
+      .station-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .station-717 { background: #1e3a5f; color: #93c5fd; border: 1px solid #2563eb; }
+      .station-718 { background: #3b1f6e; color: #c4b5fd; border: 1px solid #7c3aed; }
+      .station-2256 { background: #6b2020; color: #fca5a5; border: 1px solid #dc2626; }
+      .station-unknown { background: #2d2d2d; color: #9ca3af; border: 1px solid #4b5563; }
+      /* Quick station filter buttons */
+      .station-quick-filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .station-quick-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        letter-spacing: 0.05em;
+        margin-right: 4px;
+      }
+      .btn-station {
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        border: 1px solid;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.15s ease;
+      }
+      .btn-station.active { opacity: 1; box-shadow: 0 0 0 2px white; }
+      .btn-station:not(.active) { opacity: 0.7; }
+      .btn-station:hover { opacity: 1; }
+      .btn-all { background: #334155; color: #f1f5f9; border-color: #475569; }
+      .btn-717 { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
+      .btn-718 { background: #3b1f6e; color: #c4b5fd; border-color: #7c3aed; }
+      .btn-2256 { background: #6b2020; color: #fca5a5; border-color: #dc2626; }
+      .count-bubble {
+        background: rgba(255,255,255,0.2);
+        padding: 1px 7px;
+        border-radius: 10px;
+        font-size: 0.72rem;
+      }
+      .empty-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        color: var(--text-secondary);
+      }
+      .empty-card h3 {
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header-card">
+        <div class="title-section">
+          <h1>📑 FIR PDF Explorer</h1>
+          <p>Extract, search, and inspect FIR documents with automated text processing</p>
+        </div>
+        <div class="stats-badge">
+          {{ records | length }} FIR Documents Found
+        </div>
+      </div>
+
+      <div class="filter-card">
+        <!-- Quick Station Filters -->
+        <div class="station-quick-filters">
+          <span class="station-quick-label">📍 Station:</span>
+          <a id="filter-all" href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}"
+             class="btn-station btn-all {% if not station_id %}active{% endif %}">
+            All Stations
+            <span class="count-bubble">{{ station_counts.values() | sum }}</span>
+          </a>
+          {% for sid, sname in station_map.items() %}
+            {% set cnt = station_counts.get(sid, 0) %}
+            {% set css_cls = 'btn-' + sid if sid in ['717','718','2256'] else 'btn-all' %}
+            <a id="filter-station-{{ sid }}"
+               href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ sid }}"
+               class="btn-station {{ css_cls }} {% if station_id == sid %}active{% endif %}">
+              {{ sname }}
+              {% if cnt > 0 %}<span class="count-bubble">{{ cnt }}</span>{% endif %}
+            </a>
+          {% endfor %}
+        </div>
+        <form class="filter-form" method="get">
+          <div class="input-group" style="flex: 2;">
+            <label>Search Query</label>
+            <input name="q" value="{{ query }}" placeholder="Search text, filename, complainant, location..." />
+          </div>
+          <div class="input-group">
+            <label>Filter by Taluk (TQ)</label>
+            <input name="tq" value="{{ tq }}" placeholder="e.g. Bangarapet" />
+          </div>
+          <div class="input-group">
+            <label>Police Station</label>
+            <select name="station_id" id="station-select">
+              <option value="" {% if not station_id %}selected{% endif %}>All Stations</option>
+              {% for sid, sname in station_map.items() %}
+                <option value="{{ sid }}" {% if station_id == sid %}selected{% endif %}>{{ sname }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="input-group">
+            <label>Sort Date</label>
+            <select name="date_order">
+              <option value="newest" {% if date_order == 'newest' %}selected{% endif %}>Newest First</option>
+              <option value="oldest" {% if date_order == 'oldest' %}selected{% endif %}>Oldest First</option>
+            </select>
+          </div>
+          <div class="input-group" style="flex: 0; min-width: auto; justify-content: flex-end;">
+            <label>&nbsp;</label>
+            <div style="display: flex; gap: 8px;">
+              <button type="submit" class="btn">Filter</button>
+              {% if query or tq or station_id %}
+                <a href="/" class="btn btn-secondary">Reset</a>
+              {% endif %}
+            </div>
+          </div>
+        </form>
+      </div>
+
+      {% if records %}
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>FIR Document</th>
+                <th>Police Station</th>
+                <th>Complaint Date</th>
+                <th>Acts &amp; Penal Codes</th>
+                <th>Location / Place</th>
+                <th>Complainant Details</th>
+                <th>Pages &amp; Size</th>
+                <th>Extraction Engine</th>
+                <th>Keywords</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pdf in records %}
+                <tr>
+                  <td>
+                    <a href="/pdf/{{ pdf.path }}" class="file-link">{{ pdf.name }}</a>
+                  </td>
+                  <td>
+                    {% set sid = pdf.station_id | default('unknown') %}
+                    {% set css_cls = 'station-' + sid if sid in ['717','718','2256'] else 'station-unknown' %}
+                    <a href="/?station_id={{ sid }}"
+                       class="station-badge {{ css_cls }}"
+                       title="Filter by this station">
+                      {% if sid == '718' %}🏛️{% elif sid == '2256' %}🌐{% else %}🚔{% endif %}
+                      {{ pdf.station_name | default(sid) }}
+                    </a>
+                  </td>
+                  <td>
+                    <strong>{{ pdf.complaint_date or '—' }}</strong>
+                  </td>
+                  <td>
+                    {% if pdf.acts_sections and pdf.acts_sections != 'Not specified' %}
+                      <span class="badge-act" title="{{ pdf.acts_sections }}">⚖️ {{ pdf.acts_sections }}</span>
+                    {% else %}
+                      <span class="text-subtle">Not specified</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>{{ pdf.location or '—' }}</div>
+                    {% if pdf.tq %}
+                      <span class="text-subtle">TQ: {{ pdf.tq | upper }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div style="font-weight: 500;">{{ pdf.complainant_name or '—' }}</div>
+                    <div class="text-subtle">{{ pdf.complainant_address or '' }}</div>
+                  </td>
+                  <td>
+                    <div>{{ pdf.pages }} page{% if pdf.pages != 1 %}s{% endif %}</div>
+                    <div class="text-subtle">{{ pdf.size_mb }} MB</div>
+                  </td>
+                  <td>
+                    {% if pdf.ocr_used %}
+                      <span class="badge-ocr">Tesseract OCR</span>
+                    {% else %}
+                      <span class="badge-text">Direct Text</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div class="chip-list">
+                      {% for kw in pdf.keywords[:5] %}
+                        <span class="chip">{{ kw }}</span>
+                      {% endfor %}
+                    </div>
+                  </td>
+                  <td>
+                    <a href="/pdf/{{ pdf.path }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">View</a>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-card">
+          <h3>No FIR Documents Found</h3>
+          <p>No matching files in the <code>pdfs</code> folder or search query returned 0 results.</p>
+        </div>
+      {% endif %}
+    </div>
+  </body>
+</html>

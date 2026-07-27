@@ -1,0 +1,9 @@
+README.md
+fir_scraper.py
+setup.py
+fir_scraper.egg-info/PKG-INFO
+fir_scraper.egg-info/SOURCES.txt
+fir_scraper.egg-info/dependency_links.txt
+fir_scraper.egg-info/entry_points.txt
+fir_scraper.egg-info/requires.txt
+fir_scraper.egg-info/top_level.txt

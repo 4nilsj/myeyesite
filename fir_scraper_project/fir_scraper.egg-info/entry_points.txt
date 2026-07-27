@@ -1,0 +1,2 @@
+[console_scripts]
+fir-scrape = fir_scraper:main

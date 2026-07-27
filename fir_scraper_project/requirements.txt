@@ -1,0 +1,10 @@
+requests>=2.31.0
+urllib3>=2.2.0
+beautifulsoup4>=4.12.0
+python-dotenv>=1.0.0
+Flask>=3.0.0
+pypdf>=4.0.0
+pymupdf>=1.26.0
+pytesseract>=0.3.10,<0.4
+Pillow>=10.0.0
+pdf2image>=1.17.0
