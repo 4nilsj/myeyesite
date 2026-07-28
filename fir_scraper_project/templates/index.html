@@ -297,6 +297,20 @@
         color: var(--text-primary);
         margin-bottom: 8px;
       }
+      /* Alert boxes */
+      .alert {
+        padding: 14px 18px;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        line-height: 1.5;
+        border: 1px solid transparent;
+      }
+      .alert-success { background: #064e3b; color: #a7f3d0; border-color: #059669; }
+      .alert-info { background: #1e3a8a; color: #bfdbfe; border-color: #2563eb; }
+      .alert-warning { background: #78350f; color: #fde68a; border-color: #d97706; }
+      .alert-danger { background: #7f1d1d; color: #fca5a5; border-color: #dc2626; }
+      .hidden { display: none !important; }
     </style>
   </head>
   <body>
@@ -308,6 +322,59 @@
         </div>
         <div class="stats-badge">
           {{ records | length }} FIR Documents Found
+        </div>
+      </div>
+
+      <!-- Flash Alert Notifications -->
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div style="margin-bottom: 20px;">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }}">
+                {{ message }}
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      <!-- Fetch FIRs On-Demand Card -->
+      <div style="margin-bottom: 20px; background: #1e293b; border: 1px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="font-size: 1.1rem; font-weight: 600; color: #60a5fa; display: flex; align-items: center; gap: 10px;">
+            <span>📥 Fetch FIRs On-Demand from Portal</span>
+            <span style="font-size: 0.72rem; background: #1e3a8a; color: #93c5fd; padding: 3px 10px; border-radius: 12px; border: 1px solid #2563eb;">⚡ Smart Local Check</span>
+          </h3>
+        </div>
+        <div style="margin-top: 14px;">
+          <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 14px;">
+            Enter station &amp; FIR number range. The backend checks locally first — <strong>already downloaded FIRs will NOT be re-downloaded</strong>.
+          </p>
+          <form action="/fetch_firs" method="post" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) auto; gap: 12px; align-items: end;">
+            <div class="input-group">
+              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Police Station</label>
+              <select name="station_id" required style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;">
+                {% for sid, sname in station_map.items() %}
+                  <option value="{{ sid }}" {% if station_id == sid %}selected{% endif %}>{{ sname }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="input-group">
+              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Start FIR Number</label>
+              <input type="number" name="start_fir" value="1" min="1" max="9999" required placeholder="e.g. 1" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
+            </div>
+            <div class="input-group">
+              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">End FIR Number</label>
+              <input type="number" name="end_fir" value="10" min="1" max="9999" required placeholder="e.g. 10" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
+            </div>
+            <div class="input-group">
+              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Year</label>
+              <input type="text" name="year" value="2026" required placeholder="2026" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
+            </div>
+            <button type="submit" class="btn-filter" style="background: #2563eb; color: white; padding: 10px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; font-size: 0.875rem; transition: background 0.2s ease;">
+              ⚡ Fetch FIRs
+            </button>
+          </form>
         </div>
       </div>
 

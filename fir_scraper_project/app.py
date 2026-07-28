@@ -12,8 +12,10 @@ from pathlib import Path
 from typing import Any
 
 import fitz
-from flask import Flask, abort, render_template, request, send_from_directory
+from flask import Flask, abort, flash, redirect, render_template, request, send_from_directory, url_for
 from pypdf import PdfReader
+
+from fir_scraper import FIRScraper, build_cookies_from_env, DEFAULT_COOKIES, DEFAULT_HEADERS
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("FIRApp")
@@ -32,6 +34,7 @@ def _highlight_matches(text: str, query: str) -> str:
 
 
 app = Flask(__name__)
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "fir-scraper-secret-key-2026")
 
 BASE_DIR = Path(__file__).resolve().parent
 PDF_DIR = BASE_DIR / "pdfs"
@@ -39,11 +42,17 @@ TEMPLATE_DIR = BASE_DIR / "templates"
 CACHE_FILE = BASE_DIR / ".pdf_cache.json"
 app.template_folder = str(TEMPLATE_DIR)
 
-# --- Station Registry ---
+# --- Station Registry & District Map ---
 STATION_MAP: dict[str, str] = {
     "717": "Madbool Station (717)",
     "718": "Kalagi Station (718)",
     "2256": "Cybercrime Station (2256)",
+}
+
+STATION_DISTRICT_MAP: dict[str, str] = {
+    "717": "23",
+    "718": "23",
+    "2256": "24",
 }
 
 
@@ -865,6 +874,134 @@ def download_pdf(filename: str):
         f'inline; filename="{pdf_path.name}"'
     )
     return response
+
+
+def _get_missing_fir_numbers(station_id: str, start_fir: int, end_fir: int) -> tuple[list[int], list[int]]:
+    """Check local pdfs directory and SQLite DB for existing FIRs.
+    Returns (missing_firs, existing_firs).
+    """
+    existing: list[int] = []
+    missing: list[int] = []
+
+    for fir_num in range(start_fir, end_fir + 1):
+        fir_str = str(fir_num).zfill(4)
+        target_name = f"fir_ps{station_id}_{fir_str}.pdf"
+        target_path = PDF_DIR / target_name
+
+        legacy_name = f"fir_{fir_str}.pdf"
+        legacy_path = PDF_DIR / legacy_name
+
+        if target_path.exists():
+            existing.append(fir_num)
+        elif station_id == "717" and legacy_path.exists():
+            existing.append(fir_num)
+        else:
+            with get_db() as conn:
+                row = conn.execute(
+                    "SELECT 1 FROM fir_documents WHERE filename = ? OR filename = ?;",
+                    (target_name, legacy_name)
+                ).fetchone()
+                if row:
+                    existing.append(fir_num)
+                else:
+                    missing.append(fir_num)
+
+    return missing, existing
+
+
+@app.route("/fetch_firs", methods=["POST", "GET"])
+def fetch_firs():
+    if request.method == "GET":
+        return redirect(url_for("index"))
+
+    station_id = request.form.get("station_id", "717").strip()
+    try:
+        start_fir = int(request.form.get("start_fir", 1))
+        end_fir = int(request.form.get("end_fir", 1))
+    except ValueError:
+        flash("Invalid FIR numbers provided.", "danger")
+        return redirect(url_for("index", station_id=station_id))
+
+    year = request.form.get("year", "2026").strip()
+
+    if start_fir > end_fir:
+        flash("Start FIR number cannot be greater than End FIR number.", "warning")
+        return redirect(url_for("index", station_id=station_id))
+
+    missing_firs, existing_firs = _get_missing_fir_numbers(station_id, start_fir, end_fir)
+
+    if not missing_firs:
+        flash(
+            f"ℹ️ All requested FIRs ({len(existing_firs)} total: FIR {start_fir:04d} → {end_fir:04d}) "
+            f"already exist locally in database. Loaded instantly without re-downloading!",
+            "info"
+        )
+        return redirect(url_for("index", station_id=station_id))
+
+    captcha = os.getenv("FIR_CAPTCHA", "").strip()
+    csrf_token = os.getenv("FIR_CSRF_TOKEN", "").strip()
+
+    if not captcha or not csrf_token:
+        flash(
+            "⚠️ FIR_CAPTCHA or FIR_CSRF_TOKEN is missing in .env! "
+            "Please update session credentials in .env before fetching missing FIRs.",
+            "danger"
+        )
+        return redirect(url_for("index", station_id=station_id))
+
+    district_id = STATION_DISTRICT_MAP.get(station_id, "23")
+    url = os.getenv("FIR_URL", "https://ksp.karnataka.gov.in/fir_search_new_api.php")
+    cookies = build_cookies_from_env() or DEFAULT_COOKIES
+
+    scraper = FIRScraper(url, headers=DEFAULT_HEADERS, cookies=cookies)
+
+    min_missing = min(missing_firs)
+    max_missing = max(missing_firs)
+
+    logger.info(
+        "Fetching missing FIRs from portal for Station %s (District %s), range %s to %s",
+        station_id, district_id, min_missing, max_missing
+    )
+
+    try:
+        links = scraper.scan_firs(
+            start_fir=min_missing,
+            end_fir=max_missing,
+            year=year,
+            district_id=district_id,
+            ps_id=station_id,
+            headers=DEFAULT_HEADERS,
+            cookies=cookies,
+            captcha_val=captcha,
+            csrf_token=csrf_token,
+        )
+
+        if links:
+            missing_str_set = {str(num).zfill(4) for num in missing_firs}
+            target_links = [l for l in links if l[0] in missing_str_set]
+            if target_links:
+                scraper.download_pdfs(target_links, ps_id=station_id)
+                list_pdfs()
+                flash(
+                    f"✅ Successfully fetched & stored {len(target_links)} new FIR PDF(s) from portal! "
+                    f"({len(existing_firs)} FIRs were already present locally)",
+                    "success"
+                )
+            else:
+                flash(
+                    f"⚠️ No matching PDF links found for missing FIR range {min_missing:04d} → {max_missing:04d}.",
+                    "warning"
+                )
+        else:
+            flash(
+                f"⚠️ Portal returned no FIR records for range {min_missing:04d} → {max_missing:04d} at Station {station_id}.",
+                "warning"
+            )
+    except Exception as exc:
+        logger.error("Error fetching FIRs from UI: %s", exc, exc_info=True)
+        flash(f"💥 Failed to fetch FIRs: {exc}", "danger")
+
+    return redirect(url_for("index", station_id=station_id))
 
 
 if __name__ == "__main__":
