@@ -3,266 +3,241 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>FIR PDF Explorer & Intelligence Dashboard</title>
+    <title>FIR Intelligence &amp; PDF Explorer Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg-main: #0f172a;
-        --bg-card: #1e293b;
-        --border-color: #334155;
+        --bg-dark: #090d16;
+        --bg-card: rgba(22, 30, 46, 0.75);
+        --bg-input: #0f172a;
+        --border-color: rgba(255, 255, 255, 0.1);
+        --border-hover: rgba(56, 189, 248, 0.4);
         --text-primary: #f8fafc;
         --text-secondary: #94a3b8;
-        --accent-blue: #38bdf8;
-        --accent-blue-hover: #0284c7;
-        --badge-bg: #1e3a8a;
-        --badge-text: #93c5fd;
-        --table-hover: #26334d;
+        --text-muted: #64748b;
+        --accent-cyan: #38bdf8;
+        --accent-purple: #a855f7;
+        --accent-indigo: #6366f1;
+        --accent-emerald: #10b981;
       }
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body {
-        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        background-color: var(--bg-main);
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #090d16 60%);
         color: var(--text-primary);
         line-height: 1.5;
         padding: 24px;
         min-height: 100vh;
       }
       .container {
-        max-width: 1400px;
+        max-width: 1440px;
         margin: 0 auto;
       }
-      .header-card {
-        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+
+      /* Hero Header */
+      .hero-card {
+        background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.85) 100%);
+        backdrop-filter: blur(16px);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 24px;
+        border-radius: 16px;
+        padding: 24px 30px;
         margin-bottom: 24px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
-        gap: 16px;
+        gap: 20px;
       }
-      .title-section h1 {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--text-primary);
+      .hero-title-group h1 {
+        font-size: 1.75rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+        letter-spacing: -0.02em;
       }
-      .title-section p {
-        font-size: 0.875rem;
+      .hero-title-group p {
+        font-size: 0.9rem;
         color: var(--text-secondary);
         margin-top: 4px;
       }
-      .stats-badge {
-        background: #1e3a8a;
-        color: #93c5fd;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        border: 1px solid #2563eb;
-      }
-      .filter-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 24px;
-      }
-      .filter-form {
+      .hero-metrics {
         display: flex;
         gap: 12px;
         flex-wrap: wrap;
+      }
+      .metric-pill {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border-color);
+        padding: 8px 16px;
+        border-radius: 12px;
+        display: flex;
         align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+      }
+      .metric-pill strong {
+        color: var(--accent-cyan);
+        font-size: 1.05rem;
+      }
+
+      /* Alert Notifications */
+      .alert {
+        padding: 14px 20px;
+        border-radius: 12px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        line-height: 1.5;
+        border: 1px solid transparent;
+        backdrop-filter: blur(10px);
+        margin-bottom: 20px;
+        animation: fadeIn 0.3s ease;
+      }
+      .alert-success { background: rgba(6, 78, 59, 0.8); color: #a7f3d0; border-color: #059669; }
+      .alert-info { background: rgba(30, 58, 138, 0.8); color: #bfdbfe; border-color: #2563eb; }
+      .alert-warning { background: rgba(120, 53, 15, 0.8); color: #fde68a; border-color: #d97706; }
+      .alert-danger { background: rgba(127, 29, 29, 0.8); color: #fca5a5; border-color: #dc2626; }
+
+      /* Tabbed Portal Operations Card */
+      .portal-card {
+        background: rgba(22, 30, 46, 0.8);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(168, 85, 247, 0.3);
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+      }
+      .tab-navigation {
+        display: flex;
+        gap: 10px;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 14px;
+        margin-bottom: 20px;
+      }
+      .tab-btn {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--border-color);
+        color: var(--text-secondary);
+        padding: 8px 18px;
+        border-radius: 10px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tab-btn.active {
+        background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
+        color: #ffffff;
+        border-color: #a855f7;
+        box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);
+      }
+      .tab-btn:hover:not(.active) {
+        background: rgba(30, 41, 59, 0.8);
+        color: var(--text-primary);
+      }
+      .tab-content { display: none; }
+      .tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+
+      /* Forms */
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) auto;
+        gap: 14px;
+        align-items: end;
       }
       .input-group {
         display: flex;
         flex-direction: column;
-        gap: 4px;
-        flex: 1;
-        min-width: 200px;
+        gap: 6px;
       }
       .input-group label {
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         color: var(--text-secondary);
-        letter-spacing: 0.05em;
+        letter-spacing: 0.06em;
       }
       input, select {
-        padding: 10px 14px;
-        background: #0f172a;
+        padding: 11px 14px;
+        background: var(--bg-input);
         border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border-radius: 10px;
         color: var(--text-primary);
         font-size: 0.875rem;
+        font-family: inherit;
         outline: none;
-        transition: border-color 0.2s ease;
+        transition: all 0.2s ease;
       }
       input:focus, select:focus {
-        border-color: var(--accent-blue);
+        border-color: var(--accent-cyan);
+        box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
       }
-      .btn {
-        padding: 10px 18px;
-        background: var(--accent-blue);
-        color: #0f172a;
-        font-weight: 600;
+
+      .btn-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+        font-weight: 700;
+        padding: 11px 22px;
+        border-radius: 10px;
         border: none;
-        border-radius: 8px;
         cursor: pointer;
         font-size: 0.875rem;
-        transition: background 0.2s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
       }
-      .btn:hover {
-        background: var(--accent-blue-hover);
+      .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(37, 99, 235, 0.45);
+      }
+      .btn-purple {
+        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
         color: white;
-      }
-      .btn-secondary {
-        background: #334155;
-        color: var(--text-primary);
-      }
-      .btn-secondary:hover {
-        background: #475569;
-      }
-      .table-container {
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: 12px;
-        overflow-x: auto;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        text-align: left;
+        font-weight: 700;
+        padding: 11px 22px;
+        border-radius: 10px;
+        border: none;
+        cursor: pointer;
         font-size: 0.875rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);
       }
-      th {
-        background: #0f172a;
-        padding: 14px 16px;
-        font-weight: 600;
-        color: var(--text-secondary);
-        border-bottom: 1px solid var(--border-color);
-        white-space: nowrap;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.05em;
+      .btn-purple:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
       }
-      td {
-        padding: 14px 16px;
-        border-bottom: 1px solid #33415540;
-        color: var(--text-primary);
-        vertical-align: top;
+
+      /* Filter Card & Quick Station Buttons */
+      .filter-card {
+        background: var(--bg-card);
+        backdrop-filter: blur(16px);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
       }
-      tr:last-child td {
-        border-bottom: none;
-      }
-      tr:hover td {
-        background-color: var(--table-hover);
-      }
-      a.file-link {
-        color: var(--accent-blue);
-        text-decoration: none;
-        font-weight: 600;
-      }
-      a.file-link:hover {
-        text-decoration: underline;
-      }
-      .text-subtle {
-        color: var(--text-secondary);
-        font-size: 0.8rem;
-      }
-      .chip-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-      }
-      .chip {
-        background: #334155;
-        color: #cbd5e1;
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-      }
-      .badge-ocr {
-        background: #7c2d12;
-        color: #fdba74;
-        padding: 2px 8px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        display: inline-block;
-      }
-      .badge-text {
-        background: #064e3b;
-        color: #6ee7b7;
-        padding: 2px 8px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        display: inline-block;
-      }
-      .badge-act {
-        background: #1e1b4b;
-        color: #c7d2fe;
-        border: 1px solid #4338ca;
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-size: 0.75rem;
-        font-weight: 500;
-        display: inline-block;
-        max-width: 250px;
-        word-wrap: break-word;
-        line-height: 1.35;
-      }
-      /* Station badges */
-      .station-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 5px;
-        padding: 3px 10px;
-        border-radius: 20px;
-        font-size: 0.72rem;
-        font-weight: 600;
-        white-space: nowrap;
-      }
-      .station-717 { background: #1e3a5f; color: #93c5fd; border: 1px solid #2563eb; }
-      .station-718 { background: #3b1f6e; color: #c4b5fd; border: 1px solid #7c3aed; }
-      .station-2256 { background: #6b2020; color: #fca5a5; border: 1px solid #dc2626; }
-      .station-unknown { background: #2d2d2d; color: #9ca3af; border: 1px solid #4b5563; }
-      /* Quick station filter buttons */
       .station-quick-filters {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         flex-wrap: wrap;
         align-items: center;
-        margin-bottom: 16px;
-        padding-bottom: 16px;
+        margin-bottom: 18px;
+        padding-bottom: 18px;
         border-bottom: 1px solid var(--border-color);
       }
-      .station-quick-label {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        color: var(--text-secondary);
-        letter-spacing: 0.05em;
-        margin-right: 4px;
-      }
       .btn-station {
-        padding: 6px 14px;
+        padding: 7px 16px;
         border-radius: 20px;
-        font-size: 0.78rem;
+        font-size: 0.8rem;
         font-weight: 600;
         border: 1px solid;
         cursor: pointer;
@@ -270,70 +245,169 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        transition: all 0.15s ease;
+        transition: all 0.2s ease;
       }
-      .btn-station.active { opacity: 1; box-shadow: 0 0 0 2px white; }
-      .btn-station:not(.active) { opacity: 0.7; }
-      .btn-station:hover { opacity: 1; }
-      .btn-all { background: #334155; color: #f1f5f9; border-color: #475569; }
+      .btn-station.active {
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9), 0 0 15px rgba(56, 189, 248, 0.4);
+      }
+      .btn-station:not(.active) { opacity: 0.75; }
+      .btn-station:hover { opacity: 1; transform: translateY(-1px); }
+      .btn-all { background: #1e293b; color: #f1f5f9; border-color: #475569; }
       .btn-717 { background: #1e3a5f; color: #93c5fd; border-color: #2563eb; }
       .btn-718 { background: #3b1f6e; color: #c4b5fd; border-color: #7c3aed; }
       .btn-2256 { background: #6b2020; color: #fca5a5; border-color: #dc2626; }
+
       .count-bubble {
-        background: rgba(255,255,255,0.2);
-        padding: 1px 7px;
-        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.15);
+        padding: 2px 8px;
+        border-radius: 12px;
         font-size: 0.72rem;
       }
-      .empty-card {
+
+      /* Data Table */
+      .table-container {
         background: var(--bg-card);
+        backdrop-filter: blur(16px);
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 40px;
-        text-align: center;
+        border-radius: 16px;
+        overflow-x: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      }
+      table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        text-align: left;
+        font-size: 0.875rem;
+      }
+      th {
+        background: rgba(15, 23, 42, 0.95);
+        padding: 16px;
+        font-weight: 700;
         color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.06em;
+        position: sticky;
+        top: 0;
       }
-      .empty-card h3 {
+      td {
+        padding: 16px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         color: var(--text-primary);
-        margin-bottom: 8px;
+        vertical-align: middle;
+        transition: background 0.15s ease;
       }
-      /* Alert boxes */
-      .alert {
-        padding: 14px 18px;
-        border-radius: 10px;
+      tr:last-child td { border-bottom: none; }
+      tr:hover td { background-color: rgba(30, 41, 59, 0.7); }
+
+      a.file-link {
+        color: var(--accent-cyan);
+        text-decoration: none;
+        font-weight: 700;
+        font-family: monospace;
         font-size: 0.9rem;
-        font-weight: 500;
-        line-height: 1.5;
-        border: 1px solid transparent;
+        transition: color 0.15s ease;
       }
-      .alert-success { background: #064e3b; color: #a7f3d0; border-color: #059669; }
-      .alert-info { background: #1e3a8a; color: #bfdbfe; border-color: #2563eb; }
-      .alert-warning { background: #78350f; color: #fde68a; border-color: #d97706; }
-      .alert-danger { background: #7f1d1d; color: #fca5a5; border-color: #dc2626; }
-      .hidden { display: none !important; }
+      a.file-link:hover { color: #7dd3fc; text-decoration: underline; }
+
+      .badge-act {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        color: #c7d2fe;
+        border: 1px solid #4338ca;
+        padding: 5px 10px;
+        border-radius: 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        display: inline-block;
+        max-width: 260px;
+        word-wrap: break-word;
+        line-height: 1.4;
+      }
+      .badge-station {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+
+      .btn-action-view {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.78rem;
+        transition: all 0.15s ease;
+      }
+      .btn-action-view:hover {
+        background: #38bdf8;
+        color: #0f172a;
+      }
+
+      .btn-action-dl {
+        background: rgba(16, 185, 129, 0.15);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.3);
+        padding: 6px 12px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.78rem;
+        transition: all 0.15s ease;
+      }
+      .btn-action-dl:hover {
+        background: #10b981;
+        color: #0f172a;
+      }
+
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
     </style>
   </head>
   <body>
     <div class="container">
-      <div class="header-card">
-        <div class="title-section">
-          <h1>📑 FIR PDF Explorer</h1>
-          <p>Extract, search, and inspect FIR documents with automated text processing</p>
+      
+      <!-- Hero Header -->
+      <div class="hero-card">
+        <div class="hero-title-group">
+          <h1>⚡ FIR Intelligence &amp; PDF Explorer</h1>
+          <p>Automated Karnataka Police Portal Scraping, OCR Processing, &amp; Legal Code Analytics</p>
         </div>
-        <div class="stats-badge">
-          {% if station_id and station_stats.get(station_id) %}
-            {% set st = station_stats.get(station_id) %}
-            {{ st.count }} Saved FIR Documents (Highest: #{{ "%04d"|format(st.highest) }}{% if st.missing_count > 0 %} • {{ st.missing_count }} Unregistered{% endif %})
-          {% else %}
-            {{ records | length }} Total FIR Documents Found
-          {% endif %}
+        <div class="hero-metrics">
+          <div class="metric-pill">
+            <span>Documents:</span>
+            <strong>
+              {% if station_id and station_stats.get(station_id) %}
+                {{ station_stats[station_id].count }}
+              {% else %}
+                {{ records | length }}
+              {% endif %}
+            </strong>
+          </div>
+          <div class="metric-pill">
+            <span>Active Stations:</span>
+            <strong>3 Configured</strong>
+          </div>
+          <div class="metric-pill">
+            <span>Engine:</span>
+            <strong style="color: var(--accent-purple);">SQLite + FTS5</strong>
+          </div>
         </div>
       </div>
 
       <!-- Flash Alert Notifications -->
       {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-          <div style="margin-bottom: 20px;">
+          <div>
             {% for category, message in messages %}
               <div class="alert alert-{{ category }}">
                 {{ message }}
@@ -343,69 +417,33 @@
         {% endif %}
       {% endwith %}
 
-      <!-- Fetch FIRs On-Demand Card -->
-      <div style="margin-bottom: 20px; background: #1e293b; border: 1px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h3 style="font-size: 1.1rem; font-weight: 600; color: #60a5fa; display: flex; align-items: center; gap: 10px;">
-            <span>📥 Fetch FIRs On-Demand from Portal</span>
-            <span style="font-size: 0.72rem; background: #1e3a8a; color: #93c5fd; padding: 3px 10px; border-radius: 12px; border: 1px solid #2563eb;">⚡ Smart Local Check</span>
-          </h3>
-        </div>
-        <div style="margin-top: 14px;">
-          <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 14px;">
-            Enter station &amp; FIR number range. The backend checks locally first — <strong>already downloaded FIRs will NOT be re-downloaded</strong>.
-          </p>
-          <form action="/fetch_firs" method="post" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) auto; gap: 12px; align-items: end;">
-            <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Police Station</label>
-              <select name="station_id" required style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;">
-                {% for sid, sname in station_map.items() %}
-                  <option value="{{ sid }}" {% if station_id == sid %}selected{% endif %}>{{ sname }}</option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Start FIR Number</label>
-              <input type="number" name="start_fir" value="1" min="1" max="9999" required placeholder="e.g. 1" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
-            </div>
-            <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">End FIR Number</label>
-              <input type="number" name="end_fir" value="10" min="1" max="9999" required placeholder="e.g. 10" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
-            </div>
-            <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Year</label>
-              <input type="text" name="year" value="2026" required placeholder="2026" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
-            </div>
-            <button type="submit" class="btn-filter" style="background: #2563eb; color: white; padding: 10px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; font-size: 0.875rem; transition: background 0.2s ease;">
-              ⚡ Fetch FIRs
-            </button>
-          </form>
-        </div>
-      </div>
-
-      <!-- Extract New / Latest FIRs Card -->
-      <div style="margin-bottom: 20px; background: #1e293b; border: 1px solid #7c3aed; border-radius: 12px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-          <h3 style="font-size: 1.1rem; font-weight: 600; color: #c4b5fd; display: flex; align-items: center; gap: 10px;">
+      <!-- Tabbed Portal Operations Card -->
+      <div class="portal-card">
+        <div class="tab-navigation">
+          <button type="button" class="tab-btn active" onclick="switchTab('extract-tab')">
             <span>⚡ Extract New / Latest FIRs</span>
-            <span style="font-size: 0.72rem; background: #3b1f6e; color: #e9d5ff; padding: 3px 10px; border-radius: 12px; border: 1px solid #7c3aed;">Auto-Detect Start Number</span>
-          </h3>
-          <div style="display: flex; gap: 8px; font-size: 0.75rem; flex-wrap: wrap;">
+          </button>
+          <button type="button" class="tab-btn" onclick="switchTab('fetch-tab')">
+            <span>📥 Fetch Specific Range</span>
+          </button>
+          <div style="margin-left: auto; display: flex; gap: 8px; font-size: 0.75rem; align-items: center; flex-wrap: wrap;">
             {% for sid, highest in highest_firs.items() %}
-              <span style="background: #0f172a; border: 1px solid #334155; padding: 3px 8px; border-radius: 6px; color: #94a3b8;">
-                {{ station_map.get(sid, sid) }}: <strong style="color: #60a5fa;">#{{ "%04d"|format(highest) }}</strong>
+              <span style="background: rgba(15, 23, 42, 0.7); border: 1px solid var(--border-color); padding: 4px 10px; border-radius: 8px; color: var(--text-secondary);">
+                {{ station_map.get(sid, sid) }}: <strong style="color: var(--accent-cyan);">#{{ "%04d"|format(highest) }}</strong>
               </span>
             {% endfor %}
           </div>
         </div>
-        <div style="margin-top: 14px;">
-          <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 14px;">
-            Automatically detects the highest saved FIR number for a station and extracts the <strong>next newly registered FIRs</strong> from the portal.
+
+        <!-- TAB 1: Extract New FIRs -->
+        <div id="extract-tab" class="tab-content active">
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Auto-detects the highest saved FIR number for a station and extracts the <strong>next newly registered FIRs</strong> from the portal.
           </p>
-          <form action="/extract_new_firs" method="post" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)) auto; gap: 12px; align-items: end;">
+          <form action="/extract_new_firs" method="post" class="form-grid">
             <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Police Station</label>
-              <select name="station_id" required style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;">
+              <label>Police Station</label>
+              <select name="station_id" required>
                 {% for sid, sname in station_map.items() %}
                   {% set h = highest_firs.get(sid, 0) %}
                   <option value="{{ sid }}" {% if station_id == sid %}selected{% endif %}>{{ sname }} (Highest: #{{ "%04d"|format(h) }})</option>
@@ -413,8 +451,8 @@
               </select>
             </div>
             <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Check Next Count</label>
-              <select name="batch_size" required style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;">
+              <label>Check Next Count</label>
+              <select name="batch_size" required>
                 <option value="5">Next 5 New FIRs</option>
                 <option value="10" selected>Next 10 New FIRs</option>
                 <option value="20">Next 20 New FIRs</option>
@@ -422,20 +460,52 @@
               </select>
             </div>
             <div class="input-group">
-              <label style="color: #94a3b8; font-size: 0.75rem; font-weight: 600;">Year</label>
-              <input type="text" name="year" value="2026" required placeholder="2026" style="background: #0f172a; border: 1px solid #334155; color: #f8fafc; padding: 9px 12px; border-radius: 8px;" />
+              <label>Year</label>
+              <input type="text" name="year" value="2026" required placeholder="2026" />
             </div>
-            <button type="submit" class="btn-filter" style="background: #7c3aed; color: white; padding: 10px 20px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none; font-size: 0.875rem; transition: background 0.2s ease;">
+            <button type="submit" class="btn-purple">
               🚀 Extract New FIRs
+            </button>
+          </form>
+        </div>
+
+        <!-- TAB 2: Fetch Range -->
+        <div id="fetch-tab" class="tab-content">
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Enter station &amp; exact FIR number range. Checks locally first — <strong>already downloaded FIRs will NOT be re-downloaded</strong>.
+          </p>
+          <form action="/fetch_firs" method="post" class="form-grid">
+            <div class="input-group">
+              <label>Police Station</label>
+              <select name="station_id" required>
+                {% for sid, sname in station_map.items() %}
+                  <option value="{{ sid }}" {% if station_id == sid %}selected{% endif %}>{{ sname }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="input-group">
+              <label>Start FIR Number</label>
+              <input type="number" name="start_fir" value="1" min="1" max="9999" required placeholder="e.g. 1" />
+            </div>
+            <div class="input-group">
+              <label>End FIR Number</label>
+              <input type="number" name="end_fir" value="10" min="1" max="9999" required placeholder="e.g. 10" />
+            </div>
+            <div class="input-group">
+              <label>Year</label>
+              <input type="text" name="year" value="2026" required placeholder="2026" />
+            </div>
+            <button type="submit" class="btn-primary">
+              ⚡ Fetch FIR Range
             </button>
           </form>
         </div>
       </div>
 
+      <!-- Quick Station Filters & Search Card -->
       <div class="filter-card">
-        <!-- Quick Station Filters -->
         <div class="station-quick-filters">
-          <span class="station-quick-label">📍 Station:</span>
+          <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 4px;">📍 Station Filter:</span>
           <a id="filter-all" href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}"
              class="btn-station btn-all {% if not station_id %}active{% endif %}">
             All Stations
@@ -454,16 +524,17 @@
             </a>
           {% endfor %}
         </div>
-        <form class="filter-form" method="get">
-          <div class="input-group" style="flex: 2;">
-            <label>Search Query</label>
-            <input name="q" value="{{ query }}" placeholder="Search text, filename, complainant, location..." />
+
+        <form class="filter-form" method="get" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: end;">
+          <div class="input-group" style="flex: 2; min-width: 220px;">
+            <label>Full-Text Search Query</label>
+            <input name="q" value="{{ query }}" placeholder="Search Acts, penal codes, names, location..." />
           </div>
-          <div class="input-group">
-            <label>Filter by Taluk (TQ)</label>
+          <div class="input-group" style="min-width: 180px;">
+            <label>Taluk (TQ)</label>
             <input name="tq" value="{{ tq }}" placeholder="e.g. Bangarapet" />
           </div>
-          <div class="input-group">
+          <div class="input-group" style="min-width: 180px;">
             <label>Police Station</label>
             <select name="station_id" id="station-select">
               <option value="" {% if not station_id %}selected{% endif %}>All Stations</option>
@@ -472,7 +543,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="input-group">
+          <div class="input-group" style="min-width: 200px;">
             <label>Sort Order</label>
             <select name="date_order">
               <option value="fir_desc" {% if date_order == 'fir_desc' or not date_order %}selected{% endif %}>FIR Number Descending (0099 → 0001)</option>
@@ -481,40 +552,41 @@
               <option value="oldest" {% if date_order == 'oldest' %}selected{% endif %}>Complaint Date (Oldest First)</option>
             </select>
           </div>
-          <div class="input-group" style="flex: 0; min-width: auto; justify-content: flex-end;">
-            <label>&nbsp;</label>
-            <div style="display: flex; gap: 8px;">
-              <button type="submit" class="btn">Filter</button>
-              {% if query or tq or station_id %}
-                <a href="/" class="btn btn-secondary">Reset</a>
-              {% endif %}
-            </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="submit" class="btn-primary" style="padding: 11px 18px;">Filter View</button>
+            {% if query or tq or station_id or start_fir %}
+              <a href="/" class="btn-station btn-all" style="padding: 11px 16px; border-radius: 10px; opacity: 1;">Reset</a>
+            {% endif %}
           </div>
         </form>
       </div>
 
+      <!-- Unregistered FIRs Explanation Banner -->
       {% if station_id and station_stats.get(station_id) and station_stats[station_id].missing_count > 0 and not start_fir %}
         {% set st = station_stats[station_id] %}
-        <div style="margin-bottom: 16px; padding: 12px 16px; background: #1e293b; border: 1px solid #475569; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <span style="font-size: 0.85rem; color: #cbd5e1;">
+        <div style="margin-bottom: 20px; padding: 14px 20px; background: rgba(30, 41, 59, 0.8); border: 1px solid var(--border-color); border-radius: 12px; backdrop-filter: blur(12px); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <span style="font-size: 0.88rem; color: #cbd5e1;">
             ℹ️ <strong>{{ st.count }} FIR documents</strong> saved locally out of Range #0001 → #{{ "%04d"|format(st.highest) }}. 
             <strong style="color: #fca5a5;">{{ st.missing_count }} FIR numbers</strong> were not registered at this station on the portal:
-            {% for m in st.missing_numbers[:8] %}<span style="background: #334155; padding: 1px 6px; border-radius: 4px; font-family: monospace; font-size: 0.8rem; margin-left: 3px;">#{{ "%04d"|format(m) }}</span>{% endfor %}{% if st.missing_numbers|length > 8 %}...{% endif %}
+            {% for m in st.missing_numbers[:8] %}<span style="background: rgba(15, 23, 42, 0.8); border: 1px solid var(--border-color); padding: 2px 8px; border-radius: 6px; font-family: monospace; font-size: 0.82rem; margin-left: 4px; color: var(--accent-cyan);">#{{ "%04d"|format(m) }}</span>{% endfor %}{% if st.missing_numbers|length > 8 %}...{% endif %}
           </span>
         </div>
       {% endif %}
 
+      <!-- Range Filter Indicator Banner -->
+      {% if start_fir is not none or end_fir is not none %}
+        <div style="margin-bottom: 20px; padding: 14px 20px; background: rgba(30, 27, 75, 0.8); border: 1px solid #4338ca; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(12px); box-shadow: 0 4px 15px rgba(67, 56, 202, 0.3);">
+          <span style="font-size: 0.9rem; color: #c7d2fe; font-weight: 600;">
+            🔍 Active Range Filter: Showing <strong>ONLY Searched FIR Range</strong> (FIR {% if start_fir %}{{ "%04d"|format(start_fir) }}{% else %}1{% endif %} → {% if end_fir %}{{ "%04d"|format(end_fir) }}{% else %}9999{% endif %})
+          </span>
+          <a href="/?station_id={{ station_id }}" style="font-size: 0.8rem; background: #4338ca; color: white; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-weight: 700; transition: background 0.2s ease;">
+            ✕ Clear Range Filter
+          </a>
+        </div>
+      {% endif %}
+
+      <!-- Records Table -->
       {% if records %}
-        {% if start_fir is not none or end_fir is not none %}
-          <div style="margin-bottom: 16px; padding: 12px 16px; background: #1e1b4b; border: 1px solid #4338ca; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.2);">
-            <span style="font-size: 0.9rem; color: #c7d2fe; font-weight: 500;">
-              🔍 Filtered View: Showing <strong>ONLY Searched FIR Range</strong> (FIR {% if start_fir %}{{ "%04d"|format(start_fir) }}{% else %}1{% endif %} → {% if end_fir %}{{ "%04d"|format(end_fir) }}{% else %}9999{% endif %})
-            </span>
-            <a href="/?station_id={{ station_id }}" style="font-size: 0.8rem; background: #4338ca; color: white; padding: 5px 12px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: background 0.2s ease;">
-              ✕ Show All Station FIRs
-            </a>
-          </div>
-        {% endif %}
         <div class="table-container">
           <table>
             <thead>
@@ -523,70 +595,60 @@
                 <th>Police Station</th>
                 <th>Complaint Date</th>
                 <th>Acts &amp; Penal Codes</th>
-                <th>Location / Place</th>
+                <th>Location / Taluk</th>
                 <th>Complainant Details</th>
                 <th>Pages &amp; Size</th>
-                <th>Extraction Engine</th>
-                <th>Keywords</th>
-                <th>Action</th>
+                <th style="text-align: right;">Actions</th>
               </tr>
             </thead>
             <tbody>
               {% for pdf in records %}
                 <tr>
                   <td>
-                    <a href="/pdf/{{ pdf.path }}" class="file-link">{{ pdf.name }}</a>
-                  </td>
-                  <td>
-                    {% set sid = pdf.station_id | default('unknown') %}
-                    {% set css_cls = 'station-' + sid if sid in ['717','718','2256'] else 'station-unknown' %}
-                    <a href="/?station_id={{ sid }}"
-                       class="station-badge {{ css_cls }}"
-                       title="Filter by this station">
-                      {% if sid == '718' %}🏛️{% elif sid == '2256' %}🌐{% else %}🚔{% endif %}
-                      {{ pdf.station_name | default(sid) }}
+                    <a class="file-link" href="/pdf/{{ pdf.name }}?q={{ query }}">
+                      📄 {{ pdf.name }}
                     </a>
                   </td>
                   <td>
-                    <strong>{{ pdf.complaint_date or '—' }}</strong>
+                    {% set sid = pdf.station_id or 'unknown' %}
+                    {% set css_cls = 'btn-' + sid if sid in ['717','718','2256'] else 'btn-all' %}
+                    <span class="btn-station {{ css_cls }}" style="padding: 4px 10px; cursor: default; opacity: 1;">
+                      🏛️ {{ pdf.station_name or sid }}
+                    </span>
                   </td>
                   <td>
-                    {% if pdf.acts_sections and pdf.acts_sections != 'Not specified' %}
-                      <span class="badge-act" title="{{ pdf.acts_sections }}">⚖️ {{ pdf.acts_sections }}</span>
+                    <span style="font-weight: 600; color: #f1f5f9;">📅 {{ pdf.parsed_date or '—' }}</span>
+                  </td>
+                  <td>
+                    {% if pdf.acts_sections %}
+                      <span class="badge-act">⚖️ {{ pdf.acts_sections }}</span>
                     {% else %}
-                      <span class="text-subtle">Not specified</span>
+                      <span style="color: var(--text-muted); font-style: italic;">None detected</span>
                     {% endif %}
                   </td>
                   <td>
-                    <div>{{ pdf.location or '—' }}</div>
+                    <div style="font-weight: 600; color: #f8fafc;">{{ pdf.location or '—' }}</div>
                     {% if pdf.tq %}
-                      <span class="text-subtle">TQ: {{ pdf.tq | upper }}</span>
+                      <div style="color: var(--text-secondary); font-size: 0.8rem;">TQ: {{ pdf.tq }}</div>
                     {% endif %}
                   </td>
                   <td>
-                    <div style="font-weight: 500;">{{ pdf.complainant_name or '—' }}</div>
-                    <div class="text-subtle">{{ pdf.complainant_address or '' }}</div>
-                  </td>
-                  <td>
-                    <div>{{ pdf.pages }} page{% if pdf.pages != 1 %}s{% endif %}</div>
-                    <div class="text-subtle">{{ pdf.size_mb }} MB</div>
-                  </td>
-                  <td>
-                    {% if pdf.ocr_used %}
-                      <span class="badge-ocr">Tesseract OCR</span>
-                    {% else %}
-                      <span class="badge-text">Direct Text</span>
+                    <div style="font-weight: 600; color: #f8fafc;">{{ pdf.complainant_name or '—' }}</div>
+                    {% if pdf.complainant_address %}
+                      <div style="color: var(--text-secondary); font-size: 0.8rem; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ pdf.complainant_address }}">
+                        {{ pdf.complainant_address }}
+                      </div>
                     {% endif %}
                   </td>
                   <td>
-                    <div class="chip-list">
-                      {% for kw in pdf.keywords[:5] %}
-                        <span class="chip">{{ kw }}</span>
-                      {% endfor %}
+                    <div>{{ pdf.pages or 0 }} Pages</div>
+                    <div style="color: var(--text-secondary); font-size: 0.8rem;">{{ pdf.size_mb }} MB</div>
+                  </td>
+                  <td style="text-align: right; white-space: nowrap;">
+                    <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                      <a href="/pdf/{{ pdf.name }}?q={{ query }}" class="btn-action-view">👁️ View</a>
+                      <a href="/download/{{ pdf.name }}" class="btn-action-dl">📥 PDF</a>
                     </div>
-                  </td>
-                  <td>
-                    <a href="/pdf/{{ pdf.path }}" class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;">View</a>
                   </td>
                 </tr>
               {% endfor %}
@@ -594,11 +656,22 @@
           </table>
         </div>
       {% else %}
-        <div class="empty-card">
-          <h3>No FIR Documents Found</h3>
-          <p>No matching files in the <code>pdfs</code> folder or search query returned 0 results.</p>
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 16px; padding: 48px; text-align: center; color: var(--text-secondary); backdrop-filter: blur(12px);">
+          <h3 style="color: var(--text-primary); font-weight: 700; margin-bottom: 8px;">No FIR Documents Found</h3>
+          <p>Try adjusting your search query, clearing filters, or fetching new FIRs from the portal.</p>
         </div>
       {% endif %}
+
     </div>
+
+    <script>
+      function switchTab(tabId) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+        
+        event.target.closest('.tab-btn').classList.add('active');
+        document.getElementById(tabId).classList.add('active');
+      }
+    </script>
   </body>
 </html>
