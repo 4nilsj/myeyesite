@@ -79,6 +79,11 @@ while [[ $# -gt 0 ]]; do
       RUN_ALL=true
       shift
       ;;
+    --test)
+      echo "[run.sh] Running unit test suite..."
+      python3 -m unittest discover -s tests
+      exit 0
+      ;;
     --help|-h)
       head -20 "$0" | grep "^#" | sed 's/^# \?//'
       exit 0

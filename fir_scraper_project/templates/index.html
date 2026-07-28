@@ -56,6 +56,7 @@
         font-weight: 800;
         background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
         -webkit-background-clip: text;
+        background-clip: text;
         -webkit-text-fill-color: transparent;
         display: flex;
         align-items: center;
@@ -335,6 +336,47 @@
         font-weight: 700;
       }
 
+      .badge-crime {
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        width: fit-content;
+        background: rgba(99, 102, 241, 0.15);
+        color: #a5b4fc;
+        border: 1px solid rgba(99, 102, 241, 0.35);
+      }
+      .badge-crime-theft {
+        background: rgba(245, 158, 11, 0.15);
+        color: #fbbf24;
+        border: 1px solid rgba(245, 158, 11, 0.35);
+      }
+      .badge-crime-assault {
+        background: rgba(239, 68, 68, 0.15);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+      }
+      .badge-crime-murder {
+        background: rgba(185, 28, 28, 0.25);
+        color: #f87171;
+        border: 1px solid #ef4444;
+      }
+      .badge-crime-accident {
+        background: rgba(56, 189, 248, 0.15);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.35);
+      }
+      .badge-crime-cyber {
+        background: rgba(168, 85, 247, 0.15);
+        color: #c084fc;
+        border: 1px solid rgba(168, 85, 247, 0.35);
+      }
+      .badge-crime-threats {
+        background: rgba(236, 72, 153, 0.15);
+        color: #f472b6;
+        border: 1px solid rgba(236, 72, 153, 0.35);
+      }
+
       .btn-action-view {
         background: rgba(56, 189, 248, 0.15);
         color: #38bdf8;
@@ -370,6 +412,145 @@
       @keyframes fadeIn {
         from { opacity: 0; transform: translateY(4px); }
         to { opacity: 1; transform: translateY(0); }
+      }
+
+      /* Live Progress & Real-Time Console */
+      .progress-card {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 27, 75, 0.9) 100%);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        border-radius: 16px;
+        padding: 20px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(56, 189, 248, 0.15);
+        animation: fadeIn 0.3s ease;
+      }
+      .progress-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .progress-title-group {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .progress-station-title {
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text-primary);
+      }
+      .pulse-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: #38bdf8;
+        box-shadow: 0 0 0 rgba(56, 189, 248, 0.7);
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); }
+      }
+      .badge-status-running {
+        background: rgba(56, 189, 248, 0.2);
+        color: #38bdf8;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .badge-status-completed {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .badge-status-failed {
+        background: rgba(239, 68, 68, 0.2);
+        color: #fca5a5;
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .progress-percentage-group {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--accent-cyan);
+      }
+      .progress-bar-container {
+        width: 100%;
+        height: 10px;
+        background: rgba(15, 23, 42, 0.8);
+        border-radius: 6px;
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        margin-bottom: 14px;
+      }
+      .progress-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #38bdf8 0%, #a855f7 100%);
+        border-radius: 6px;
+        transition: width 0.4s ease;
+      }
+      .progress-metrics-row {
+        display: flex;
+        gap: 18px;
+        font-size: 0.85rem;
+        margin-bottom: 12px;
+        flex-wrap: wrap;
+      }
+      .console-toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.5);
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
+      }
+      .latest-log-message {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        font-family: monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 80%;
+      }
+      .btn-console-toggle {
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid var(--border-color);
+        color: var(--text-primary);
+        font-size: 0.75rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .btn-console-toggle:hover {
+        background: rgba(255, 255, 255, 0.18);
+      }
+      .console-logs-box {
+        margin-top: 10px;
+        background: #090d16;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 12px;
+        max-height: 180px;
+        overflow-y: auto;
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: #a7f3d0;
+        line-height: 1.6;
       }
     </style>
   </head>
@@ -416,6 +597,40 @@
           </div>
         {% endif %}
       {% endwith %}
+
+      <!-- Live Progress & Real-Time Log Console Card -->
+      <div id="live-progress-card" class="progress-card" style="display: none;">
+        <div class="progress-header">
+          <div class="progress-title-group">
+            <span class="pulse-indicator"></span>
+            <span id="progress-station-label" class="progress-station-title">Station Live Extraction</span>
+            <span id="progress-status-badge" class="badge-status-running">Scanning ⚡</span>
+          </div>
+          <div class="progress-percentage-group">
+            <span id="progress-percentage-text">0%</span>
+          </div>
+        </div>
+
+        <div class="progress-bar-container">
+          <div id="progress-bar-fill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="progress-metrics-row">
+          <div><span style="color: var(--text-secondary);">Target Range:</span> <strong id="progress-target-range" style="color: var(--accent-cyan);">#0000 → #0000</strong></div>
+          <div><span style="color: var(--text-secondary);">Scanned:</span> <strong id="progress-scanned-count">0 / 0</strong></div>
+          <div><span style="color: var(--text-secondary);">PDFs Found:</span> <strong id="progress-found-count" style="color: #34d399;">0</strong></div>
+          <div><span style="color: var(--text-secondary);">Downloaded:</span> <strong id="progress-downloaded-count" style="color: #c084fc;">0</strong></div>
+        </div>
+
+        <div class="console-toggle-row">
+          <span id="progress-message-text" class="latest-log-message">Initializing...</span>
+          <button type="button" class="btn-console-toggle" onclick="toggleConsoleLogs()">📋 Live Logs</button>
+        </div>
+
+        <div id="console-logs-box" class="console-logs-box" style="display: none;">
+          <div id="console-logs-content"></div>
+        </div>
+      </div>
 
       <!-- Tabbed Portal Operations Card -->
       <div class="portal-card">
@@ -592,12 +807,10 @@
             <thead>
               <tr>
                 <th>FIR Document</th>
-                <th>Police Station</th>
                 <th>Complaint Date</th>
-                <th>Acts &amp; Penal Codes</th>
+                <th>Crime / Complaint Type</th>
                 <th>Location / Taluk</th>
                 <th>Complainant Details</th>
-                <th>Pages &amp; Size</th>
                 <th style="text-align: right;">Actions</th>
               </tr>
             </thead>
@@ -610,21 +823,35 @@
                     </a>
                   </td>
                   <td>
-                    {% set sid = pdf.station_id or 'unknown' %}
-                    {% set css_cls = 'btn-' + sid if sid in ['717','718','2256'] else 'btn-all' %}
-                    <span class="btn-station {{ css_cls }}" style="padding: 4px 10px; cursor: default; opacity: 1;">
-                      🏛️ {{ pdf.station_name or sid }}
-                    </span>
+                    <span style="font-weight: 600; color: #f1f5f9; white-space: nowrap;">📅 {{ pdf.complaint_date or pdf.parsed_date or '—' }}</span>
                   </td>
                   <td>
-                    <span style="font-weight: 600; color: #f1f5f9;">📅 {{ pdf.parsed_date or '—' }}</span>
-                  </td>
-                  <td>
-                    {% if pdf.acts_sections %}
-                      <span class="badge-act">⚖️ {{ pdf.acts_sections }}</span>
-                    {% else %}
-                      <span style="color: var(--text-muted); font-style: italic;">None detected</span>
+                    {% set ctype = get_crime_type(pdf.acts_sections, pdf.text) %}
+                    {% set badge_class = '' %}
+                    {% if ctype == 'Theft' %}
+                      {% set badge_class = 'badge-crime-theft' %}
+                    {% elif ctype in ['Gang Fight', 'Assault / Fight'] %}
+                      {% set badge_class = 'badge-crime-assault' %}
+                    {% elif ctype in ['Half Murder', 'Murder'] %}
+                      {% set badge_class = 'badge-crime-murder' %}
+                    {% elif ctype == 'Accident' %}
+                      {% set badge_class = 'badge-crime-accident' %}
+                    {% elif ctype == 'Cyber Scam' %}
+                      {% set badge_class = 'badge-crime-cyber' %}
+                    {% elif ctype == 'Threats & Abuse' %}
+                      {% set badge_class = 'badge-crime-threats' %}
                     {% endif %}
+                    
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                      <span class="badge-crime {{ badge_class }}">
+                        ⚡ {{ ctype }}
+                      </span>
+                      {% if pdf.acts_sections %}
+                        <span style="color: var(--text-muted); font-size: 0.72rem; font-family: monospace;" title="{{ pdf.acts_sections }}">
+                          {{ pdf.acts_sections[:35] }}{% if pdf.acts_sections|length > 35 %}...{% endif %}
+                        </span>
+                      {% endif %}
+                    </div>
                   </td>
                   <td>
                     <div style="font-weight: 600; color: #f8fafc;">{{ pdf.location or '—' }}</div>
@@ -639,10 +866,6 @@
                         {{ pdf.complainant_address }}
                       </div>
                     {% endif %}
-                  </td>
-                  <td>
-                    <div>{{ pdf.pages or 0 }} Pages</div>
-                    <div style="color: var(--text-secondary); font-size: 0.8rem;">{{ pdf.size_mb }} MB</div>
                   </td>
                   <td style="text-align: right; white-space: nowrap;">
                     <div style="display: flex; gap: 6px; justify-content: flex-end;">
@@ -672,6 +895,92 @@
         event.target.closest('.tab-btn').classList.add('active');
         document.getElementById(tabId).classList.add('active');
       }
+
+      // Real-Time Live Scraping Progress Listener
+      let evtSource = null;
+      let wasRunning = false;
+
+      function initProgressListener() {
+        if (!window.EventSource) return;
+
+        evtSource = new EventSource('/api/scrape_progress');
+        evtSource.onmessage = function(event) {
+          try {
+            const data = JSON.parse(event.data);
+            updateProgressUI(data);
+          } catch(e) {
+            console.error("Failed to parse progress event:", e);
+          }
+        };
+      }
+
+      function updateProgressUI(data) {
+        const card = document.getElementById('live-progress-card');
+        if (!card) return;
+
+        if (data.status === 'idle') {
+          if (!wasRunning) {
+            card.style.display = 'none';
+          }
+          return;
+        }
+
+        wasRunning = true;
+        card.style.display = 'block';
+
+        // Update text & values
+        document.getElementById('progress-station-label').innerText = data.station_name || 'Station Extraction';
+        document.getElementById('progress-percentage-text').innerText = (data.progress_percent || 0) + '%';
+        document.getElementById('progress-bar-fill').style.width = (data.progress_percent || 0) + '%';
+        
+        const startStr = String(data.start_fir || 0).padStart(4, '0');
+        const endStr = String(data.end_fir || 0).padStart(4, '0');
+        document.getElementById('progress-target-range').innerText = '#' + startStr + ' → #' + endStr;
+        document.getElementById('progress-scanned-count').innerText = (data.scanned_count || 0) + ' / ' + (data.total_scanned || 0);
+        document.getElementById('progress-found-count').innerText = data.found_count || 0;
+        document.getElementById('progress-downloaded-count').innerText = (data.downloaded_count || 0) + (data.total_download ? (' / ' + data.total_download) : '');
+
+        document.getElementById('progress-message-text').innerText = data.message || '';
+
+        // Status badge
+        const badge = document.getElementById('progress-status-badge');
+        if (data.status === 'scanning') {
+          badge.className = 'badge-status-running';
+          badge.innerText = 'Scanning ⚡';
+        } else if (data.status === 'downloading') {
+          badge.className = 'badge-status-running';
+          badge.innerText = 'Downloading 📥';
+        } else if (data.status === 'indexing') {
+          badge.className = 'badge-status-running';
+          badge.innerText = 'Indexing 🧠';
+        } else if (data.status === 'completed') {
+          badge.className = 'badge-status-completed';
+          badge.innerText = 'Completed ✅';
+          setTimeout(() => { window.location.reload(); }, 3500);
+        } else if (data.status === 'failed') {
+          badge.className = 'badge-status-failed';
+          badge.innerText = 'Failed ❌';
+        }
+
+        // Logs content
+        if (data.logs && Array.isArray(data.logs)) {
+          const content = document.getElementById('console-logs-content');
+          content.innerHTML = data.logs.map(log => `<div>${log}</div>`).join('');
+          const box = document.getElementById('console-logs-box');
+          box.scrollTop = box.scrollHeight;
+        }
+      }
+
+      function toggleConsoleLogs() {
+        const box = document.getElementById('console-logs-box');
+        if (box.style.display === 'none') {
+          box.style.display = 'block';
+        } else {
+          box.style.display = 'none';
+        }
+      }
+
+      document.addEventListener('DOMContentLoaded', initProgressListener);
     </script>
   </body>
 </html>

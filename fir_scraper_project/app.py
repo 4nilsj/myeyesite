@@ -8,12 +8,13 @@ import os
 import re
 import subprocess
 import threading
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import fitz
-from flask import Flask, abort, flash, redirect, render_template, request, send_from_directory, url_for
+from flask import Flask, Response, abort, flash, jsonify, redirect, render_template, request, send_from_directory, url_for
 from pypdf import PdfReader
 
 from fir_scraper import FIRScraper, build_cookies_from_env, DEFAULT_COOKIES, DEFAULT_HEADERS
@@ -55,6 +56,144 @@ STATION_DISTRICT_MAP: dict[str, str] = {
     "718": "23",
     "2256": "24",
 }
+
+
+class ScrapeProgressTracker:
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.reset()
+
+    def reset(self) -> None:
+        with self._lock:
+            self.status = "idle"
+            self.station_id = ""
+            self.station_name = ""
+            self.start_fir = 0
+            self.end_fir = 0
+            self.current_fir = 0
+            self.scanned_count = 0
+            self.total_scanned = 0
+            self.found_count = 0
+            self.downloaded_count = 0
+            self.total_download = 0
+            self.progress_percent = 0
+            self.message = "Idle"
+            self.logs: list[str] = []
+            self.error: str | None = None
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def start_job(self, station_id: str, station_name: str, start_fir: int, end_fir: int) -> None:
+        with self._lock:
+            self.status = "scanning"
+            self.station_id = station_id
+            self.station_name = station_name
+            self.start_fir = start_fir
+            self.end_fir = end_fir
+            self.current_fir = start_fir
+            self.scanned_count = 0
+            self.total_scanned = max(1, end_fir - start_fir + 1)
+            self.found_count = 0
+            self.downloaded_count = 0
+            self.total_download = 0
+            self.progress_percent = 0
+            self.message = f"Starting scan for {station_name} (#{start_fir:04d} → #{end_fir:04d})..."
+            self.logs = [f"🚀 Started extraction for {station_name} (#{start_fir:04d} to #{end_fir:04d})"]
+            self.error = None
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def update_scan_progress(self, info: dict[str, Any]) -> None:
+        with self._lock:
+            self.status = "scanning"
+            self.current_fir = info.get("current_fir", self.current_fir)
+            step = info.get("step", 1)
+            total = info.get("total", self.total_scanned)
+            self.scanned_count = step
+            counts = info.get("counts", {})
+            self.found_count = counts.get("found", self.found_count)
+            self.progress_percent = min(70, int((step / total) * 70))
+            msg = info.get("message", f"Scanning FIR #{info.get('fir_str', '')}...")
+            self.message = msg
+            self.logs.append(msg)
+            if len(self.logs) > 40:
+                self.logs = self.logs[-40:]
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def start_download_phase(self, total_links: int) -> None:
+        with self._lock:
+            self.status = "downloading"
+            self.total_download = total_links
+            self.downloaded_count = 0
+            self.progress_percent = 70
+            msg = f"📥 Found {total_links} matching PDF(s). Downloading files..."
+            self.message = msg
+            self.logs.append(msg)
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def update_download_progress(self, info: dict[str, Any]) -> None:
+        with self._lock:
+            self.status = "downloading"
+            idx = info.get("current_idx", 1)
+            total = info.get("total_links", max(1, self.total_download))
+            self.downloaded_count = idx
+            self.progress_percent = min(90, 70 + int((idx / total) * 20))
+            msg = info.get("message", f"Downloading PDF #{info.get('fir_str', '')}...")
+            self.message = msg
+            self.logs.append(msg)
+            if len(self.logs) > 40:
+                self.logs = self.logs[-40:]
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def start_indexing_phase(self) -> None:
+        with self._lock:
+            self.status = "indexing"
+            self.progress_percent = 92
+            msg = "🧠 Indexing downloaded FIR PDFs into SQLite + FTS5 full-text database..."
+            self.message = msg
+            self.logs.append(msg)
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def complete_job(self, new_count: int) -> None:
+        with self._lock:
+            self.status = "completed"
+            self.progress_percent = 100
+            msg = f"✅ Finished! Downloaded & indexed {new_count} new FIR document(s)."
+            self.message = msg
+            self.logs.append(msg)
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def fail_job(self, error_msg: str) -> None:
+        with self._lock:
+            self.status = "failed"
+            self.error = error_msg
+            msg = f"❌ Extraction error: {error_msg}"
+            self.message = msg
+            self.logs.append(msg)
+            self.updated_at = datetime.now(UTC).isoformat()
+
+    def to_dict(self) -> dict[str, Any]:
+        with self._lock:
+            return {
+                "status": self.status,
+                "station_id": self.station_id,
+                "station_name": self.station_name,
+                "start_fir": self.start_fir,
+                "end_fir": self.end_fir,
+                "current_fir": self.current_fir,
+                "scanned_count": self.scanned_count,
+                "total_scanned": self.total_scanned,
+                "found_count": self.found_count,
+                "downloaded_count": self.downloaded_count,
+                "total_download": self.total_download,
+                "progress_percent": self.progress_percent,
+                "message": self.message,
+                "logs": list(self.logs),
+                "error": self.error,
+                "updated_at": self.updated_at,
+            }
+
+
+progress_tracker = ScrapeProgressTracker()
+
 
 
 def _get_station_from_filename(filename: str) -> tuple[str, str]:
@@ -760,11 +899,11 @@ def _parse_date_to_sort_key(date_str: str) -> str:
     """Convert DD/MM/YYYY date to YYYY-MM-DD for accurate chronological sorting."""
     if not date_str:
         return ""
-    parts = str(date_str).strip().split("/")
+    parts = date_str.strip().split("/")
     if len(parts) == 3:
         d, m, y = parts[0].zfill(2), parts[1].zfill(2), parts[2]
         return f"{y}-{m}-{d}"
-    return str(date_str)
+    return date_str
 
 
 def list_pdfs(
@@ -888,10 +1027,10 @@ def get_station_stats() -> dict[str, dict[str, Any]]:
     stats: dict[str, dict[str, Any]] = {}
     for sid in STATION_MAP:
         recs = list_pdfs(station_id=sid, date_order="fir_asc")
-        nums = [
-            _extract_fir_number_from_filename(r["name"])
+        nums: list[int] = [
+            num
             for r in recs
-            if _extract_fir_number_from_filename(r["name"]) is not None
+            if (num := _extract_fir_number_from_filename(r["name"])) is not None
         ]
         highest = max(nums) if nums else 0
         missing = [n for n in range(1, highest + 1) if n not in nums] if highest else []
@@ -1050,7 +1189,16 @@ def _async_scrape_worker(
     csrf_token: str,
     missing_firs: list[int],
 ) -> None:
+    station_name = STATION_MAP.get(station_id, f"Station {station_id}")
+    progress_tracker.start_job(station_id, station_name, start_fir, end_fir)
     logger.info("Background thread started for Station %s (FIRs %s..%s)", station_id, start_fir, end_fir)
+
+    def scan_callback(info: dict[str, Any]) -> None:
+        progress_tracker.update_scan_progress(info)
+
+    def download_callback(info: dict[str, Any]) -> None:
+        progress_tracker.update_download_progress(info)
+
     try:
         scraper = FIRScraper(url, headers=headers, cookies=cookies)
         links = scraper.scan_firs(
@@ -1063,16 +1211,25 @@ def _async_scrape_worker(
             cookies=cookies,
             captcha_val=captcha,
             csrf_token=csrf_token,
+            progress_callback=scan_callback,
         )
         if links:
             missing_str_set = {str(num).zfill(4) for num in missing_firs}
             target_links = [l for l in links if l[0] in missing_str_set]
             if target_links:
-                scraper.download_pdfs(target_links, ps_id=station_id)
+                progress_tracker.start_download_phase(len(target_links))
+                scraper.download_pdfs(target_links, ps_id=station_id, progress_callback=download_callback)
+                progress_tracker.start_indexing_phase()
                 sync_all_pdfs()
+                progress_tracker.complete_job(len(target_links))
                 logger.info("Background scrape completed: downloaded & indexed %d new FIRs", len(target_links))
+            else:
+                progress_tracker.complete_job(0)
+        else:
+            progress_tracker.complete_job(0)
     except Exception as exc:
         logger.error("Background scrape thread error: %s", exc, exc_info=True)
+        progress_tracker.fail_job(str(exc))
 
 
 @app.route("/fetch_firs", methods=["POST", "GET"])
@@ -1210,6 +1367,109 @@ def extract_new_firs():
     )
 
     return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
+
+
+@app.route("/api/scrape_status")
+def scrape_status():
+    return jsonify(progress_tracker.to_dict())
+
+
+@app.route("/api/scrape_progress")
+def scrape_progress():
+    def event_stream():
+        while True:
+            data = progress_tracker.to_dict()
+            yield f"data: {json.dumps(data)}\n\n"
+            time.sleep(0.5)
+
+    return Response(event_stream(), mimetype="text/event-stream")
+
+
+def get_crime_type_badge(acts_str: str = "", text: str = "") -> str:
+    acts_clean = (acts_str or "").upper()
+
+    # Extract legal section segment after U/S, U/s, SECTION, SEC, or ಕಲಂ to prevent matching phone numbers or dates in text
+    sec_match = re.search(
+        r"(?:U/S|U/s|SECTION|SEC|ಕಲಂ|ಕಾಯ್ದೆ)\s*[:\-]?\s*([A-Za-z0-9\(\)\,\s/-]+)",
+        acts_clean
+    )
+    sec_text = sec_match.group(1) if sec_match else acts_clean
+
+    # 1. BNSS 126 / CrPC 107/151 -> Preventive action for Group Clash / Gang Fight
+    if re.search(r"\b126\b|\b126\(|\b129\b|\b130\b|\b170\b|\b107\b|\b151\b", sec_text) and (
+        "BNSS" in acts_clean or "CRPC" in acts_clean
+    ):
+        return "Gang Fight"
+
+    # 2. Attempted Murder / Half Murder: BNS 109, IPC 307
+    if re.search(r"\b109\b|\b109\(|\b307\b", sec_text):
+        return "Half Murder"
+
+    # 3. Murder: BNS 103, IPC 302
+    if re.search(r"\b103\b|\b103\(|\b302\b", sec_text):
+        return "Murder"
+
+    # 4. Kidnapping: BNS 137, IPC 363, 364, 365, 366
+    if re.search(r"\b137\b|\b137\(|\b363\b|\b364\b|\b365\b|\b366\b", sec_text):
+        return "Kidnapping"
+
+    # 5. Theft: BNS 303, 305, IPC 378, 379, 380, 381
+    if re.search(r"\b303\b|\b303\(|\b305\b|\b305\(|\b378\b|\b379\b|\b380\b|\b381\b", sec_text):
+        return "Theft"
+
+    # 6. Accident: BNS 281, 106, IPC 279, 304A, MV Act 187, 184, 185
+    if re.search(r"\b281\b|\b106\b|\b106\(|\b279\b|\b304A\b|\b187\b|\b184\b|\b185\b", sec_text):
+        return "Accident"
+
+    # 7. Gang Fight / Rioting / Unlawful Assembly: BNS 189, 190, 191, IPC 143, 147, 148, 149
+    if re.search(r"\b189\b|\b190\b|\b191\b|\b143\b|\b147\b|\b148\b|\b149\b", sec_text):
+        return "Gang Fight"
+
+    # 8. Assault / Physical Fight: BNS 115, 117, 118, IPC 323, 324, 325, 326
+    if re.search(r"\b115\b|\b117\b|\b118\b|\b323\b|\b324\b|\b325\b|\b326\b", sec_text):
+        return "Assault / Fight"
+
+    # 9. Cyber Scam / Fraud: IT Act 66C, 66D, BNS 318, 319, IPC 419, 420
+    if re.search(r"\b66C\b|\b66D\b|\b318\b|\b319\b|\b419\b|\b420\b", sec_text) or "INFORMATION TECHNOLOGY" in acts_clean:
+        return "Cyber Scam"
+
+    # 10. Robbery / Dacoity: BNS 309, 310, IPC 392, 395
+    if re.search(r"\b309\b|\b310\b|\b392\b|\b395\b", sec_text):
+        return "Robbery"
+
+    # 11. Land Dispute / Trespass: BNS 329, 331, IPC 447, 448, 451, 452
+    if re.search(r"\b329\b|\b331\b|\b447\b|\b448\b|\b451\b|\b452\b", sec_text):
+        return "Land Dispute / Trespass"
+
+    # 12. Threats & Abuse: BNS 351, 352, 353, IPC 504, 506, 509
+    if re.search(r"\b351\b|\b352\b|\b353\b|\b504\b|\b506\b|\b509\b", sec_text):
+        return "Threats & Abuse"
+
+    # 13. Excise / Illegal Liquor
+    if "EXCISE" in acts_clean or "LIQUOR" in acts_clean or (re.search(r"\b32\b|\b34\b", sec_text) and "EXCISE" in acts_clean):
+        return "Illegal Liquor"
+
+    # 14. Gambling
+    if "GAMBLING" in acts_clean or (re.search(r"\b78\b|\b87\b", sec_text) and "GAMBLING" in acts_clean):
+        return "Gambling"
+
+    # 15. Woman Harassment: BNS 74, 75, 76, 78, IPC 354, 354D
+    if "POCSO" in acts_clean or (
+        re.search(r"\b74\b|\b74\(|\b75\b|\b75\(|\b76\b|\b76\(|\b78\b|\b78\(|\b354\b|\b354D\b", sec_text)
+        and ("BNS" in acts_clean or "IPC" in acts_clean or "WOMAN" in acts_clean)
+    ):
+        return "Woman Harassment"
+
+    # 16. Domestic Cruelty: BNS 85, IPC 498A
+    if re.search(r"\b85\b|\b85\(|\b498A\b", sec_text) and ("BNS" in acts_clean or "IPC" in acts_clean):
+        return "Domestic Cruelty"
+
+    return "General Offense"
+
+
+@app.context_processor
+def utility_processor():
+    return dict(get_crime_type=get_crime_type_badge)
 
 
 if __name__ == "__main__":

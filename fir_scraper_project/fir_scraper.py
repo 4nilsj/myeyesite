@@ -18,7 +18,10 @@ from dotenv import load_dotenv
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
+from typing import Any, Callable
+
 load_dotenv()
+
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -166,14 +169,41 @@ class FIRScraper:
             'name="random_captcha"' in t,
         ])
 
-    def scan_firs(self, start_fir: int, end_fir: int, year: str, district_id: str, ps_id: str, headers: dict[str, str], cookies: dict[str, str], captcha_val: str, csrf_token: str) -> list[tuple[str, str]]:
+    def scan_firs(
+        self,
+        start_fir: int,
+        end_fir: int,
+        year: str,
+        district_id: str,
+        ps_id: str,
+        headers: dict[str, str],
+        cookies: dict[str, str],
+        captcha_val: str,
+        csrf_token: str,
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    ) -> list[tuple[str, str]]:
         self.logger.info("Starting FIR scan from %s to %s for year %s", start_fir, end_fir, year)
         found_links: list[tuple[str, str]] = []
 
         counts = {"found": 0, "not_found": 0, "no_link": 0, "error": 0, "session": 0}
+        total_firs = max(1, end_fir - start_fir + 1)
 
         for fir_num in range(start_fir, end_fir + 1):
             fir_str = str(fir_num).zfill(4)
+            step_idx = fir_num - start_fir + 1
+            if progress_callback:
+                progress_callback({
+                    "type": "scan_progress",
+                    "current_fir": fir_num,
+                    "start_fir": start_fir,
+                    "end_fir": end_fir,
+                    "fir_str": fir_str,
+                    "step": step_idx,
+                    "total": total_firs,
+                    "counts": counts,
+                    "message": f"Scanning FIR #{fir_str} ({step_idx}/{total_firs})...",
+                })
+
             data = {
                 "district_id": district_id,
                 "ps_id": ps_id,
@@ -277,11 +307,26 @@ class FIRScraper:
         return found_links
 
 
-    def download_pdfs(self, links: list[tuple[str, str]], ps_id: str = "") -> None:
+    def download_pdfs(
+        self,
+        links: list[tuple[str, str]],
+        ps_id: str = "",
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    ) -> None:
         self.logger.info("Starting PDF download for %s items", len(links))
         station_suffix = f"_ps{ps_id}" if ps_id else ""
+        total_links = max(1, len(links))
 
         for idx, (fir_str, href) in enumerate(links, start=1):
+            if progress_callback:
+                progress_callback({
+                    "type": "download_progress",
+                    "current_idx": idx,
+                    "total_links": total_links,
+                    "fir_str": fir_str,
+                    "message": f"Downloading PDF #{fir_str} ({idx}/{total_links})...",
+                })
+
             full_url = urljoin(self.base_url, href)
 
             if urlparse(full_url).hostname != self.host:
