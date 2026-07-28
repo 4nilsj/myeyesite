@@ -7,6 +7,7 @@ import logging
 import os
 import re
 import subprocess
+import threading
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -581,8 +582,8 @@ def _ocr_pdf(pdf_path: Path) -> tuple[str, str]:
             if poppler_path
             else convert_from_path(str(pdf_path), dpi=150)
         )
-    except (OSError, RuntimeError) as exc:
-        return "", f"OCR conversion failed: {exc}"
+    except Exception as exc:
+        return "", f"OCR conversion unavailable/failed: {exc}"
 
     for lang in ["kan+eng", "kan", "eng"]:
         try:
@@ -729,16 +730,53 @@ def get_pdf_info_cached(pdf_path: Path) -> dict[str, Any]:
     return data
 
 
+def _extract_fir_number_from_filename(filename: str) -> int | None:
+    """Extract integer FIR number from filename (e.g. fir_ps718_0005.pdf -> 5)."""
+    match = re.search(r"(\d+)\.pdf$", filename, re.IGNORECASE)
+    if match:
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return None
+    return None
+
+
+def sync_all_pdfs() -> int:
+    """Sync disk PDF files into SQLite DB cache."""
+    if not PDF_DIR.exists():
+        return 0
+    pdf_paths = list(PDF_DIR.glob("*.pdf"))
+    count = 0
+    for pdf_path in pdf_paths:
+        try:
+            get_pdf_info_cached(pdf_path)
+            count += 1
+        except Exception as exc:
+            logger.warning("Skipping unparseable PDF %s: %s", pdf_path.name, exc)
+    return count
+
+
+def _parse_date_to_sort_key(date_str: str) -> str:
+    """Convert DD/MM/YYYY date to YYYY-MM-DD for accurate chronological sorting."""
+    if not date_str:
+        return ""
+    parts = str(date_str).strip().split("/")
+    if len(parts) == 3:
+        d, m, y = parts[0].zfill(2), parts[1].zfill(2), parts[2]
+        return f"{y}-{m}-{d}"
+    return str(date_str)
+
+
 def list_pdfs(
-    query: str = "", tq: str = "", date_order: str = "newest", station_id: str = ""
+    query: str = "",
+    tq: str = "",
+    date_order: str = "fir_desc",
+    station_id: str = "",
+    start_fir: int | None = None,
+    end_fir: int | None = None,
 ) -> list[dict[str, Any]]:
     if not PDF_DIR.exists():
         return []
-
-    # Sync all PDF files into SQLite DB
-    pdf_paths = sorted(PDF_DIR.glob("*.pdf"))
-    for pdf_path in pdf_paths:
-        get_pdf_info_cached(pdf_path)
 
     query_str = query.strip()
     tq_filter = tq.strip().lower()
@@ -801,9 +839,34 @@ def list_pdfs(
         rows = conn.execute(sql, params).fetchall()
         for r in rows:
             try:
-                records.append(json.loads(r["data_json"]))
+                rec = json.loads(r["data_json"])
+                filename = rec.get("name", "")
+                if start_fir is not None or end_fir is not None:
+                    fir_num = _extract_fir_number_from_filename(filename)
+                    if fir_num is not None:
+                        if start_fir is not None and fir_num < start_fir:
+                            continue
+                        if end_fir is not None and fir_num > end_fir:
+                            continue
+                records.append(rec)
             except Exception:
                 pass
+
+    def _get_fir_num(r: dict[str, Any]) -> int:
+        num = _extract_fir_number_from_filename(r.get("name", ""))
+        return num if num is not None else 999999
+
+    def _get_iso_date(r: dict[str, Any]) -> str:
+        return _parse_date_to_sort_key(r.get("parsed_date", ""))
+
+    if date_order == "fir_asc":
+        records.sort(key=lambda r: _get_fir_num(r))
+    elif date_order == "newest":
+        records.sort(key=lambda r: (_get_iso_date(r), -_get_fir_num(r)), reverse=True)
+    elif date_order == "oldest":
+        records.sort(key=lambda r: (_get_iso_date(r), _get_fir_num(r)))
+    else:  # fir_desc (default)
+        records.sort(key=lambda r: _get_fir_num(r), reverse=True)
 
     return records
 
@@ -820,14 +883,44 @@ def get_station_counts() -> dict[str, int]:
     return counts
 
 
+def get_station_stats() -> dict[str, dict[str, Any]]:
+    """Calculate total saved count, highest FIR number, and unregistered FIR numbers per station."""
+    stats: dict[str, dict[str, Any]] = {}
+    for sid in STATION_MAP:
+        recs = list_pdfs(station_id=sid, date_order="fir_asc")
+        nums = [
+            _extract_fir_number_from_filename(r["name"])
+            for r in recs
+            if _extract_fir_number_from_filename(r["name"]) is not None
+        ]
+        highest = max(nums) if nums else 0
+        missing = [n for n in range(1, highest + 1) if n not in nums] if highest else []
+        stats[sid] = {
+            "count": len(recs),
+            "highest": highest,
+            "missing_count": len(missing),
+            "missing_numbers": missing,
+        }
+    return stats
+
+
 @app.route("/")
 def index():
     query = request.args.get("q", "").strip()
     tq = request.args.get("tq", "").strip()
-    date_order = request.args.get("date_order", "newest").strip().lower()
+    date_order = request.args.get("date_order", "fir_desc").strip().lower()
     station_id = request.args.get("station_id", "").strip()
-    records = list_pdfs(query, tq, date_order, station_id)
+
+    start_fir_raw = request.args.get("start_fir", "").strip()
+    end_fir_raw = request.args.get("end_fir", "").strip()
+
+    start_fir = int(start_fir_raw) if start_fir_raw.isdigit() else None
+    end_fir = int(end_fir_raw) if end_fir_raw.isdigit() else None
+
+    records = list_pdfs(query, tq, date_order, station_id, start_fir, end_fir)
     station_counts = get_station_counts()
+    station_stats = get_station_stats()
+    highest_firs = get_highest_firs_summary()
     return render_template(
         "index.html",
         records=records,
@@ -835,8 +928,12 @@ def index():
         tq=tq,
         date_order=date_order,
         station_id=station_id,
+        start_fir=start_fir,
+        end_fir=end_fir,
         station_map=STATION_MAP,
         station_counts=station_counts,
+        station_stats=station_stats,
+        highest_firs=highest_firs,
     )
 
 
@@ -876,6 +973,37 @@ def download_pdf(filename: str):
     return response
 
 
+def _get_highest_fir_number(station_id: str) -> int:
+    """Find the highest integer FIR number saved for a given station."""
+    highest = 0
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT filename FROM fir_documents WHERE station_id = ? OR (station_id = 'unknown' AND filename LIKE 'fir_%');",
+            (station_id,)
+        ).fetchall()
+        for r in rows:
+            num = _extract_fir_number_from_filename(r["filename"])
+            if num and num > highest:
+                highest = num
+
+    if PDF_DIR.exists():
+        for p in PDF_DIR.glob("*.pdf"):
+            sid, _ = _get_station_from_filename(p.name)
+            if sid == station_id:
+                num = _extract_fir_number_from_filename(p.name)
+                if num and num > highest:
+                    highest = num
+    return highest
+
+
+def get_highest_firs_summary() -> dict[str, int]:
+    """Return dictionary mapping station_id to its highest saved FIR number."""
+    summary: dict[str, int] = {}
+    for sid in STATION_MAP:
+        summary[sid] = _get_highest_fir_number(sid)
+    return summary
+
+
 def _get_missing_fir_numbers(station_id: str, start_fir: int, end_fir: int) -> tuple[list[int], list[int]]:
     """Check local pdfs directory and SQLite DB for existing FIRs.
     Returns (missing_firs, existing_firs).
@@ -909,6 +1037,44 @@ def _get_missing_fir_numbers(station_id: str, start_fir: int, end_fir: int) -> t
     return missing, existing
 
 
+def _async_scrape_worker(
+    url: str,
+    headers: dict,
+    cookies: dict,
+    start_fir: int,
+    end_fir: int,
+    year: str,
+    district_id: str,
+    station_id: str,
+    captcha: str,
+    csrf_token: str,
+    missing_firs: list[int],
+) -> None:
+    logger.info("Background thread started for Station %s (FIRs %s..%s)", station_id, start_fir, end_fir)
+    try:
+        scraper = FIRScraper(url, headers=headers, cookies=cookies)
+        links = scraper.scan_firs(
+            start_fir=start_fir,
+            end_fir=end_fir,
+            year=year,
+            district_id=district_id,
+            ps_id=station_id,
+            headers=headers,
+            cookies=cookies,
+            captcha_val=captcha,
+            csrf_token=csrf_token,
+        )
+        if links:
+            missing_str_set = {str(num).zfill(4) for num in missing_firs}
+            target_links = [l for l in links if l[0] in missing_str_set]
+            if target_links:
+                scraper.download_pdfs(target_links, ps_id=station_id)
+                sync_all_pdfs()
+                logger.info("Background scrape completed: downloaded & indexed %d new FIRs", len(target_links))
+    except Exception as exc:
+        logger.error("Background scrape thread error: %s", exc, exc_info=True)
+
+
 @app.route("/fetch_firs", methods=["POST", "GET"])
 def fetch_firs():
     if request.method == "GET":
@@ -933,10 +1099,10 @@ def fetch_firs():
     if not missing_firs:
         flash(
             f"ℹ️ All requested FIRs ({len(existing_firs)} total: FIR {start_fir:04d} → {end_fir:04d}) "
-            f"already exist locally in database. Loaded instantly without re-downloading!",
+            f"already exist locally in database. Showing requested FIR range below!",
             "info"
         )
-        return redirect(url_for("index", station_id=station_id))
+        return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
 
     captcha = os.getenv("FIR_CAPTCHA", "").strip()
     csrf_token = os.getenv("FIR_CSRF_TOKEN", "").strip()
@@ -947,63 +1113,105 @@ def fetch_firs():
             "Please update session credentials in .env before fetching missing FIRs.",
             "danger"
         )
-        return redirect(url_for("index", station_id=station_id))
+        return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
 
     district_id = STATION_DISTRICT_MAP.get(station_id, "23")
     url = os.getenv("FIR_URL", "https://ksp.karnataka.gov.in/fir_search_new_api.php")
     cookies = build_cookies_from_env() or DEFAULT_COOKIES
 
-    scraper = FIRScraper(url, headers=DEFAULT_HEADERS, cookies=cookies)
+    # Launch background thread so UI responds INSTANTLY
+    worker_thread = threading.Thread(
+        target=_async_scrape_worker,
+        args=(
+            url,
+            DEFAULT_HEADERS,
+            cookies,
+            min(missing_firs),
+            max(missing_firs),
+            year,
+            district_id,
+            station_id,
+            captcha,
+            csrf_token,
+            missing_firs,
+        ),
+        daemon=True,
+    )
+    worker_thread.start()
 
-    min_missing = min(missing_firs)
-    max_missing = max(missing_firs)
-
-    logger.info(
-        "Fetching missing FIRs from portal for Station %s (District %s), range %s to %s",
-        station_id, district_id, min_missing, max_missing
+    flash(
+        f"⚡ Started fetching {len(missing_firs)} missing FIR(s) from portal in background! "
+        f"({len(existing_firs)} FIRs loaded instantly from local cache). Refresh in a few seconds to see new downloads.",
+        "success"
     )
 
+    return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
+
+
+@app.route("/extract_new_firs", methods=["POST", "GET"])
+def extract_new_firs():
+    if request.method == "GET":
+        return redirect(url_for("index"))
+
+    station_id = request.form.get("station_id", "717").strip()
     try:
-        links = scraper.scan_firs(
-            start_fir=min_missing,
-            end_fir=max_missing,
-            year=year,
-            district_id=district_id,
-            ps_id=station_id,
-            headers=DEFAULT_HEADERS,
-            cookies=cookies,
-            captcha_val=captcha,
-            csrf_token=csrf_token,
+        batch_size = int(request.form.get("batch_size", 10))
+    except ValueError:
+        batch_size = 10
+
+    year = request.form.get("year", "2026").strip()
+
+    highest = _get_highest_fir_number(station_id)
+    start_fir = highest + 1
+    end_fir = start_fir + batch_size - 1
+
+    station_name = STATION_MAP.get(station_id, f"Station {station_id}")
+
+    captcha = os.getenv("FIR_CAPTCHA", "").strip()
+    csrf_token = os.getenv("FIR_CSRF_TOKEN", "").strip()
+
+    if not captcha or not csrf_token:
+        flash(
+            f"⚠️ FIR_CAPTCHA or FIR_CSRF_TOKEN missing in .env! "
+            f"Please update credentials in .env before extracting new FIRs (FIR {start_fir:04d} → {end_fir:04d}).",
+            "danger"
         )
+        return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
 
-        if links:
-            missing_str_set = {str(num).zfill(4) for num in missing_firs}
-            target_links = [l for l in links if l[0] in missing_str_set]
-            if target_links:
-                scraper.download_pdfs(target_links, ps_id=station_id)
-                list_pdfs()
-                flash(
-                    f"✅ Successfully fetched & stored {len(target_links)} new FIR PDF(s) from portal! "
-                    f"({len(existing_firs)} FIRs were already present locally)",
-                    "success"
-                )
-            else:
-                flash(
-                    f"⚠️ No matching PDF links found for missing FIR range {min_missing:04d} → {max_missing:04d}.",
-                    "warning"
-                )
-        else:
-            flash(
-                f"⚠️ Portal returned no FIR records for range {min_missing:04d} → {max_missing:04d} at Station {station_id}.",
-                "warning"
-            )
-    except Exception as exc:
-        logger.error("Error fetching FIRs from UI: %s", exc, exc_info=True)
-        flash(f"💥 Failed to fetch FIRs: {exc}", "danger")
+    district_id = STATION_DISTRICT_MAP.get(station_id, "23")
+    url = os.getenv("FIR_URL", "https://ksp.karnataka.gov.in/fir_search_new_api.php")
+    cookies = build_cookies_from_env() or DEFAULT_COOKIES
 
-    return redirect(url_for("index", station_id=station_id))
+    missing_firs = list(range(start_fir, end_fir + 1))
+
+    worker_thread = threading.Thread(
+        target=_async_scrape_worker,
+        args=(
+            url,
+            DEFAULT_HEADERS,
+            cookies,
+            start_fir,
+            end_fir,
+            year,
+            district_id,
+            station_id,
+            captcha,
+            csrf_token,
+            missing_firs,
+        ),
+        daemon=True,
+    )
+    worker_thread.start()
+
+    flash(
+        f"⚡ Auto-detected next FIR range! Highest saved for {station_name}: #{highest:04d}. "
+        f"Started extracting next {batch_size} new FIRs (FIR {start_fir:04d} → {end_fir:04d}) in background!",
+        "success"
+    )
+
+    return redirect(url_for("index", station_id=station_id, start_fir=start_fir, end_fir=end_fir))
 
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5002"))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
