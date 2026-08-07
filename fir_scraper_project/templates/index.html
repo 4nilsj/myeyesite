@@ -956,7 +956,12 @@
         } else if (data.status === 'completed') {
           badge.className = 'badge-status-completed';
           badge.innerText = 'Completed ✅';
-          setTimeout(() => { window.location.reload(); }, 3500);
+          setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('start_fir');
+            url.searchParams.delete('end_fir');
+            window.location.href = url.toString();
+          }, 2000);
         } else if (data.status === 'failed') {
           badge.className = 'badge-status-failed';
           badge.innerText = 'Failed ❌';

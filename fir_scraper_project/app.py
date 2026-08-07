@@ -880,8 +880,16 @@ def _extract_fir_number_from_filename(filename: str) -> int | None:
     return None
 
 
-def sync_all_pdfs() -> int:
+_LAST_SYNC_TIME = 0.0
+
+def sync_all_pdfs(force: bool = False) -> int:
     """Sync disk PDF files into SQLite DB cache."""
+    global _LAST_SYNC_TIME
+    now = time.time()
+    if not force and (now - _LAST_SYNC_TIME) < 15.0:
+        return 0
+    _LAST_SYNC_TIME = now
+
     if not PDF_DIR.exists():
         return 0
     pdf_paths = list(PDF_DIR.glob("*.pdf"))
@@ -914,6 +922,7 @@ def list_pdfs(
     start_fir: int | None = None,
     end_fir: int | None = None,
 ) -> list[dict[str, Any]]:
+    sync_all_pdfs()
     if not PDF_DIR.exists():
         return []
 
@@ -1220,7 +1229,7 @@ def _async_scrape_worker(
                 progress_tracker.start_download_phase(len(target_links))
                 scraper.download_pdfs(target_links, ps_id=station_id, progress_callback=download_callback)
                 progress_tracker.start_indexing_phase()
-                sync_all_pdfs()
+                sync_all_pdfs(force=True)
                 progress_tracker.complete_job(len(target_links))
                 logger.info("Background scrape completed: downloaded & indexed %d new FIRs", len(target_links))
             else:
