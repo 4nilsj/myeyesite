@@ -887,18 +887,25 @@ def _extract_fir_number_from_filename(filename: str) -> int | None:
 _LAST_SYNC_TIME = 0.0
 
 def sync_all_pdfs(force: bool = False) -> int:
-    """Sync disk PDF files into SQLite DB cache."""
+    """Sync any PDF files on disk that are not yet in the SQLite DB."""
     global _LAST_SYNC_TIME
     now = time.time()
-    if not force and (now - _LAST_SYNC_TIME) < 15.0:
+    if not force and (now - _LAST_SYNC_TIME) < 30.0:
         return 0
     _LAST_SYNC_TIME = now
 
     if not PDF_DIR.exists():
         return 0
+
+    # Only process PDFs that are not already in the DB (avoid re-parsing everything)
     pdf_paths = list(PDF_DIR.glob("*.pdf"))
+    with get_db() as conn:
+        existing = {r[0] for r in conn.execute("SELECT filename FROM fir_documents;").fetchall()}
+
     count = 0
     for pdf_path in pdf_paths:
+        if pdf_path.name in existing:
+            continue  # Already indexed — skip
         try:
             get_pdf_info_cached(pdf_path)
             count += 1
@@ -926,7 +933,8 @@ def list_pdfs(
     start_fir: int | None = None,
     end_fir: int | None = None,
 ) -> list[dict[str, Any]]:
-    sync_all_pdfs()
+    # Don't call sync_all_pdfs() here — it's slow and blocks the request.
+    # PDFs are indexed immediately after download by the worker thread.
     if not PDF_DIR.exists():
         return []
 
@@ -1232,10 +1240,23 @@ def _async_scrape_worker(
             if target_links:
                 progress_tracker.start_download_phase(len(target_links))
                 scraper.download_pdfs(target_links, ps_id=station_id, progress_callback=download_callback)
+                # Index each newly downloaded PDF immediately into SQLite
                 progress_tracker.start_indexing_phase()
+                indexed = 0
+                for fir_str, _link in target_links:
+                    # Reconstruct the expected filename the downloader would have saved
+                    pdf_name = f"fir_ps{station_id}_{fir_str}.pdf"
+                    pdf_path = PDF_DIR / pdf_name
+                    if pdf_path.exists():
+                        try:
+                            get_pdf_info_cached(pdf_path)
+                            indexed += 1
+                        except Exception as exc:
+                            logger.warning("Could not index %s: %s", pdf_name, exc)
+                # Fallback: sync any remaining unindexed PDFs
                 sync_all_pdfs(force=True)
-                progress_tracker.complete_job(len(target_links))
-                logger.info("Background scrape completed: downloaded & indexed %d new FIRs", len(target_links))
+                progress_tracker.complete_job(indexed or len(target_links))
+                logger.info("Background scrape completed: downloaded & indexed %d new FIRs", indexed or len(target_links))
             else:
                 progress_tracker.complete_job(0)
         else:
