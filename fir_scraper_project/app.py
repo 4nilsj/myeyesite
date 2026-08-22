@@ -162,6 +162,8 @@ class ScrapeProgressTracker:
             self.message = msg
             self.logs.append(msg)
             self.updated_at = datetime.now(UTC).isoformat()
+        # Auto-reset to idle after 8s so subsequent page loads don't re-trigger the redirect
+        threading.Timer(8.0, self.reset).start()
 
     def fail_job(self, error_msg: str) -> None:
         with self._lock:
@@ -171,6 +173,8 @@ class ScrapeProgressTracker:
             self.message = msg
             self.logs.append(msg)
             self.updated_at = datetime.now(UTC).isoformat()
+        # Auto-reset to idle after 15s so the error banner clears
+        threading.Timer(15.0, self.reset).start()
 
     def to_dict(self) -> dict[str, Any]:
         with self._lock:
@@ -225,6 +229,10 @@ def get_db():
     conn.row_factory = sqlite3.Row
     try:
         yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
     finally:
         conn.close()
 
@@ -459,6 +467,15 @@ def _parse_date_value(value: str) -> datetime | None:
 
 
 _init_db()
+
+# Sync any PDFs on disk that aren't yet in the DB (runs in background at startup)
+def _startup_sync() -> None:
+    try:
+        n = sync_all_pdfs(force=True)
+        if n:
+            logger.info("Startup sync: indexed %d new PDF(s) from disk.", n)
+    except Exception as exc:
+        logger.warning("Startup sync error: %s", exc)
 
 
 def _clean_summary_val(value: str) -> str:
@@ -1513,4 +1530,5 @@ def utility_processor():
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5002"))
+    threading.Thread(target=_startup_sync, daemon=True).start()
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

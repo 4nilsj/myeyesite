@@ -992,12 +992,17 @@
           badge.innerText = 'Completed ✅';
           // Close SSE before redirecting to avoid triggering a new SSE connection
           if (evtSource) { evtSource.close(); evtSource = null; }
-          setTimeout(() => {
-            const url = new URL(window.location.href);
-            url.searchParams.delete('start_fir');
-            url.searchParams.delete('end_fir');
-            window.location.href = url.toString();
-          }, 2000);
+          // Only redirect ONCE per completed job (keyed by job timestamp)
+          const redirectKey = 'fir_completed_' + (data.updated_at || '');
+          if (!sessionStorage.getItem(redirectKey)) {
+            sessionStorage.setItem(redirectKey, '1');
+            setTimeout(() => {
+              const url = new URL(window.location.href);
+              url.searchParams.delete('start_fir');
+              url.searchParams.delete('end_fir');
+              window.location.href = url.toString();
+            }, 2000);
+          }
         } else if (data.status === 'failed') {
           badge.className = 'badge-status-failed';
           badge.innerText = 'Failed ❌';
