@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import sqlite3
 import subprocess
 import threading
 import time
@@ -42,6 +43,7 @@ BASE_DIR = Path(__file__).resolve().parent
 PDF_DIR = BASE_DIR / "pdfs"
 TEMPLATE_DIR = BASE_DIR / "templates"
 CACHE_FILE = BASE_DIR / ".pdf_cache.json"
+DB_FILE = BASE_DIR / "fir_cache.db"
 app.template_folder = str(TEMPLATE_DIR)
 
 # --- Station Registry & District Map ---
@@ -214,15 +216,17 @@ def _get_station_from_filename(filename: str) -> tuple[str, str]:
         return "717", STATION_MAP.get("717", "Madbool Station (717)")
     return "unknown", "Unknown Station"
 
-import sqlite3
-
-DB_FILE = BASE_DIR / "fir_cache.db"
+from contextlib import contextmanager
 
 
-def get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_FILE)
+@contextmanager
+def get_db():
+    conn = sqlite3.connect(DB_FILE, timeout=10)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def _init_db() -> None:
