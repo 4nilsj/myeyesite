@@ -1390,12 +1390,17 @@ def scrape_status():
 @app.route("/api/scrape_progress")
 def scrape_progress():
     def event_stream():
+        terminal_statuses = {"idle", "completed", "failed"}
         while True:
             data = progress_tracker.to_dict()
             yield f"data: {json.dumps(data)}\n\n"
-            time.sleep(0.5)
+            if data.get("status") in terminal_statuses:
+                # Send one final event then close the stream
+                break
+            time.sleep(1.0)
 
-    return Response(event_stream(), mimetype="text/event-stream")
+    return Response(event_stream(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 def get_crime_type_badge(acts_str: str = "", text: str = "") -> str:

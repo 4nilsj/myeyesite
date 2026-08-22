@@ -899,17 +899,51 @@
       // Real-Time Live Scraping Progress Listener
       let evtSource = null;
       let wasRunning = false;
+      let progressListenerStarted = false;
 
       function initProgressListener() {
         if (!window.EventSource) return;
+        if (progressListenerStarted) return;
+        progressListenerStarted = true;
 
+        // First do a quick status check — only open SSE if a job is running
+        fetch('/api/scrape_status')
+          .then(r => r.json())
+          .then(data => {
+            const activeStatuses = new Set(['scanning', 'downloading', 'indexing']);
+            if (activeStatuses.has(data.status)) {
+              openEventSource();
+            } else {
+              // Not running — just update UI once and stop
+              updateProgressUI(data);
+            }
+          })
+          .catch(() => {}); // silently ignore if endpoint unavailable
+      }
+
+      function openEventSource() {
+        if (evtSource) return; // already open
         evtSource = new EventSource('/api/scrape_progress');
+
         evtSource.onmessage = function(event) {
           try {
             const data = JSON.parse(event.data);
             updateProgressUI(data);
+            // Close stream ourselves when terminal status received
+            if (data.status === 'idle' || data.status === 'completed' || data.status === 'failed') {
+              evtSource.close();
+              evtSource = null;
+            }
           } catch(e) {
             console.error("Failed to parse progress event:", e);
+          }
+        };
+
+        evtSource.onerror = function() {
+          // Stream closed by server (terminal state) — this is expected, don't reconnect
+          if (evtSource) {
+            evtSource.close();
+            evtSource = null;
           }
         };
       }
@@ -956,6 +990,8 @@
         } else if (data.status === 'completed') {
           badge.className = 'badge-status-completed';
           badge.innerText = 'Completed ✅';
+          // Close SSE before redirecting to avoid triggering a new SSE connection
+          if (evtSource) { evtSource.close(); evtSource = null; }
           setTimeout(() => {
             const url = new URL(window.location.href);
             url.searchParams.delete('start_fir');
