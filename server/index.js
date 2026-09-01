@@ -6,14 +6,15 @@ const geocodeRouter = require('./routes/geocode');
 const placesRouter  = require('./routes/places');
 const marketRouter  = require('./routes/market');
 
-const { initCache } = require('./utils/redisCache');
+const { initCache } = require('./utils/cache');
 const { searchLimiter, detailLimiter } = require('./middleware/rateLimit');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ─── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors({ origin: 'http://localhost:5173' })); // Vite dev server
+const CORS_ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'; // Vite dev server
+app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 
 // ─── Health check ──────────────────────────────────────────────────────────────

@@ -2,9 +2,11 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const CATEGORY_MAP = require('../utils/categoryMap');
-const cache = require('../utils/redisCache');
+const cache = require('../utils/cache');
 
 const SELF_URL = () => `http://localhost:${process.env.PORT || 5000}`;
+// IPv4-preferred axios instance for loopback calls — avoids IPv6 TCP resets
+const localAxios = axios.create({ family: 4, timeout: 20000 });
 
 // Scoring weights — how many places of each type = 10/10 for real-estate use case
 const SCORE_WEIGHTS = {
@@ -33,14 +35,14 @@ router.get('/:pincode', async (req, res) => {
     }
 
     // 1. Geocode the PIN
-    const geoRes = await axios.get(`${SELF_URL()}/api/geocode/${pincode}`);
+    const geoRes = await localAxios.get(`${SELF_URL()}/api/geocode/${pincode}`);
     const { lat, lng, locality, state } = geoRes.data;
 
     // 2. Fetch all categories in parallel
     const categoryKeys = Object.keys(CATEGORY_MAP);
     const fetches = await Promise.allSettled(
       categoryKeys.map(cat =>
-        axios.get(`${SELF_URL()}/api/places/nearby`, {
+        localAxios.get(`${SELF_URL()}/api/places/nearby`, {
           params: { lat, lng, radius, category: cat },
         }).then(r => ({ cat, places: r.data.places || [] }))
       )

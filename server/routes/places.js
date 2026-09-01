@@ -2,13 +2,17 @@ const express = require('express');
 const axios = require('axios');
 const router = express.Router();
 const CATEGORY_MAP = require('../utils/categoryMap');
-const cache = require('../utils/redisCache');
+const cache = require('../utils/cache');
 const { searchLimiter, detailLimiter } = require('../middleware/rateLimit');
 
 const USE_FSQ = () => process.env.PLACES_PROVIDER === 'foursquare';
 
 const PLACES_BASE = 'https://maps.googleapis.com/maps/api/place';
 const FSQ_BASE    = 'https://api.foursquare.com/v3';
+
+// Use IPv4 for all outbound API calls — prevents "connection reset by peer" on
+// dual-stack networks where Google sometimes drops the IPv6 stream mid-transfer.
+const gAxios = axios.create({ family: 4, timeout: 15000 });
 
 const fsqHeaders = () => ({ Authorization: process.env.FOURSQUARE_API_KEY, Accept: 'application/json' });
 const normalizeRating = (r) => r ? parseFloat((r / 2).toFixed(1)) : null;
@@ -26,7 +30,7 @@ async function nearbyGoogle(lat, lng, radius, category) {
   };
   if (meta.type) params.type = meta.type;
 
-  const response = await axios.get(`${PLACES_BASE}/nearbysearch/json`, { params });
+  const response = await gAxios.get(`${PLACES_BASE}/nearbysearch/json`, { params });
   if (response.data.status === 'REQUEST_DENIED') throw Object.assign(new Error('API key invalid or Places API not enabled'), { code: 403 });
   if (response.data.status === 'ZERO_RESULTS') return [];
 
@@ -35,7 +39,7 @@ async function nearbyGoogle(lat, lng, radius, category) {
 
   while (nextPageToken && rawResults.length < 60) {
     await new Promise(r => setTimeout(r, 2000));
-    const pageResp = await axios.get(`${PLACES_BASE}/nearbysearch/json`, {
+    const pageResp = await gAxios.get(`${PLACES_BASE}/nearbysearch/json`, {
       params: { pagetoken: nextPageToken, key: process.env.GOOGLE_SERVER_API_KEY },
     });
     if (pageResp.data.status !== 'OK') break;
@@ -157,7 +161,7 @@ router.get('/contact/:placeId', detailLimiter, async (req, res) => {
       result = { placeId, website: p.website || null, phone: p.tel || null, hasWebsite: !!p.website, hasPhone: !!p.tel, openNow: p.hours?.open_now ?? null };
     } else {
       // Google: use Place Details with just contact + basic fields ($0.020/call)
-      const r = await axios.get(`${PLACES_BASE}/details/json`, {
+      const r = await gAxios.get(`${PLACES_BASE}/details/json`, {
         params: {
           place_id: placeId,
           fields: 'website,formatted_phone_number,international_phone_number,opening_hours',
@@ -234,7 +238,7 @@ router.get('/details/:placeId', detailLimiter, async (req, res) => {
         detailsLoaded: true,
       };
     } else {
-      const r = await axios.get(`${PLACES_BASE}/details/json`, {
+      const r = await gAxios.get(`${PLACES_BASE}/details/json`, {
         params: {
           place_id: placeId,
           fields: ['name','formatted_address','formatted_phone_number','international_phone_number','website','opening_hours','rating','user_ratings_total','reviews','photos','price_level','url','business_status'].join(','),
@@ -282,13 +286,30 @@ router.get('/photo', async (req, res) => {
   const { ref, width = 600 } = req.query;
   if (!ref) return res.status(400).json({ error: 'ref is required' });
   try {
-    const response = await axios.get(`${PLACES_BASE}/photo`, {
+    const response = await gAxios.get(`${PLACES_BASE}/photo`, {
       params: { maxwidth: width, photo_reference: ref, key: process.env.GOOGLE_SERVER_API_KEY },
       responseType: 'stream',
+      maxRedirects: 5,          // follow Google's redirect to the actual CDN image
     });
+
+    // Forward content-type so the browser knows it's an image
+    const ct = response.headers['content-type'];
+    if (ct) res.setHeader('Content-Type', ct);
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+
+    // Destroy the upstream stream if the client disconnects early
+    req.on('close', () => response.data.destroy());
+
+    response.data.on('error', (streamErr) => {
+      console.error('[photo-proxy] stream error:', streamErr.message);
+      if (!res.headersSent) res.status(502).json({ error: 'Photo stream failed' });
+      else res.destroy();
+    });
+
     response.data.pipe(res);
   } catch (err) {
-    res.status(500).json({ error: 'Photo fetch failed' });
+    console.error('[photo-proxy]', err.code || err.message);
+    if (!res.headersSent) res.status(502).json({ error: 'Photo fetch failed' });
   }
 });
 

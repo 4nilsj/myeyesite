@@ -1,9 +1,12 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
-const cache = require('../utils/redisCache');
+const cache = require('../utils/cache');
 
 const USE_FSQ = () => process.env.PLACES_PROVIDER === 'foursquare';
+
+// Prefer IPv4 for Google calls — prevents TCP connection reset on dual-stack networks
+const gAxios = axios.create({ family: 4, timeout: 10000 });
 
 // ─── Nominatim (free, used when PLACES_PROVIDER=foursquare) ────────────────────
 const NOMINATIM = 'https://nominatim.openstreetmap.org';
@@ -41,7 +44,7 @@ async function geocodeNominatim(pincode) {
 
 // ─── Google Geocoding (default) ────────────────────────────────────────────────
 async function geocodeGoogle(pincode) {
-  const response = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+  const response = await gAxios.get('https://maps.googleapis.com/maps/api/geocode/json', {
     params: {
       address: `${pincode}, India`,
       components: `country:IN|postal_code:${pincode}`,
@@ -117,7 +120,7 @@ router.get('/reverse/lookup', async (req, res) => {
       pincode = r.data?.address?.postcode;
       formattedAddress = r.data?.display_name;
     } else {
-      const r = await axios.get('https://maps.googleapis.com/maps/api/geocode/json', {
+      const r = await gAxios.get('https://maps.googleapis.com/maps/api/geocode/json', {
         params: { latlng: `${lat},${lng}`, result_type: 'postal_code', key: process.env.GOOGLE_SERVER_API_KEY },
       });
       if (r.data.status !== 'OK' || !r.data.results.length) throw new Error('Not found');

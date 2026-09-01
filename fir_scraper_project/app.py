@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import sqlite3
 import subprocess
 import threading
@@ -37,7 +38,12 @@ def _highlight_matches(text: str, query: str) -> str:
 
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "fir-scraper-secret-key-2026")
+app.secret_key = os.getenv("FLASK_SECRET_KEY") or secrets.token_hex(32)
+if not os.getenv("FLASK_SECRET_KEY"):
+    logger.warning(
+        "FLASK_SECRET_KEY not set — using a random secret for this process "
+        "(sessions won't survive a restart). Set FLASK_SECRET_KEY in .env for a stable secret."
+    )
 
 BASE_DIR = Path(__file__).resolve().parent
 PDF_DIR = BASE_DIR / "pdfs"
@@ -1116,7 +1122,9 @@ def index():
 
 @app.route("/pdf/<path:filename>")
 def pdf_detail(filename: str):
-    pdf_path = PDF_DIR / filename
+    pdf_path = (PDF_DIR / filename).resolve()
+    if not pdf_path.is_relative_to(PDF_DIR.resolve()):
+        abort(404)
     if not pdf_path.exists() or pdf_path.suffix.lower() != ".pdf":
         abort(404)
 

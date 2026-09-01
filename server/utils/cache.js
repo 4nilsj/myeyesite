@@ -1,6 +1,6 @@
 const NodeCache = require('node-cache');
 
-// Pure in-memory cache — no Redis needed for local development
+// In-memory cache (per-process, cleared on restart) — sufficient for local/single-instance use
 const memoryCache = new NodeCache({ stdTTL: 86400, checkperiod: 120 });
 
 const initCache = async () => {
