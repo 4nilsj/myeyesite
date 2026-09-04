@@ -7,7 +7,7 @@ import MapView from './components/MapView';
 import AnalyticsDashboard from './components/AnalyticsDashboard';
 import MarketResearch from './components/MarketResearch';
 import ErrorBoundary from './components/ErrorBoundary';
-import { geocodePin, fetchNearby, fetchBatchNearby, fetchContact } from './utils/api';
+import { geocodePin, searchLocality, fetchNearby, fetchBatchNearby, fetchContact } from './utils/api';
 import { ALL_CATEGORIES } from './utils/categoryMap';
 import { debounce, calculateDistance } from './utils/debounce';
 
@@ -114,29 +114,49 @@ export default function App() {
     setFilters(prev => ({ ...prev, maxDistance: radius }));
   }, [radius]);
 
-  const doSearch = useCallback(async (pin) => {
+  const doSearch = useCallback(async (query) => {
+    if (!query || !query.trim()) return;
     setLoading(true);
     setError('');
     setPlaces([]);
     setGeoData(null);
     setActivePlaceId(null);
     setActiveCategory('all');
-    setPincode(pin);
 
-    // Update URL
-    const url = new URL(window.location);
-    url.searchParams.set('pin', pin);
-    window.history.replaceState({}, '', url);
-
-    // Update search history
-    setHistory(prev => {
-      const next = [pin, ...prev.filter(p => p !== pin)].slice(0, 10);
-      return next;
-    });
+    const clean = query.trim();
+    const isPin = /^[1-9][0-9]{5}$/.test(clean);
 
     try {
-      const geo = await geocodePin(pin);
+      let geo;
+      if (isPin) {
+        geo = await geocodePin(clean);
+      } else {
+        geo = await searchLocality(clean);
+      }
+
+      if (!geo || !geo.lat || !geo.lng) {
+        throw new Error('Could not resolve location coordinates');
+      }
+
+      const resolvedPin = geo.pincode || (isPin ? clean : '');
+      setPincode(resolvedPin || clean);
       setGeoData(geo);
+
+      // Update URL with the resolved PIN code or query
+      const url = new URL(window.location);
+      if (resolvedPin) {
+        url.searchParams.set('pin', resolvedPin);
+      } else {
+        url.searchParams.delete('pin');
+      }
+      window.history.replaceState({}, '', url);
+
+      // Update search history
+      const historyTag = resolvedPin || clean;
+      setHistory(prev => {
+        const next = [historyTag, ...prev.filter(p => p !== historyTag)].slice(0, 10);
+        return next;
+      });
 
       const searchRadius = geo.suggestedRadius || 5000;
       userChangedRadiusRef.current = false;
@@ -163,7 +183,7 @@ export default function App() {
 
       setPlaces(allPlaces);
     } catch (e) {
-      setError(e.response?.data?.error || 'Search failed. Check the PIN code and try again.');
+      setError(e.response?.data?.error || e.message || 'Search failed. Try a 6-digit PIN code or prominent landmark.');
     } finally {
       setLoading(false);
     }
