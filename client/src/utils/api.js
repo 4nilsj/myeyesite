@@ -5,6 +5,12 @@ const api = axios.create({ baseURL: '/api' });
 export const geocodePin = (pincode) =>
   api.get(`/geocode/${pincode}`).then(r => r.data);
 
+export const searchLocality = (query) =>
+  api.get('/geocode/search/locality', { params: { q: query } }).then(r => r.data);
+
+export const fetchSuggestions = (query) =>
+  api.get('/geocode/suggest', { params: { q: query } }).then(r => r.data);
+
 export const reverseGeocode = (lat, lng) =>
   api.get('/geocode/reverse/lookup', { params: { lat, lng } }).then(r => r.data);
 
