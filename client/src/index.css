@@ -104,8 +104,15 @@ html {
 }
 
 /* ─── Leaflet Map Overrides ─────────────────────────────────── */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 420px !important;
+  z-index: 1;
+}
+
 .dark .leaflet-container {
-  background-color: #020617 !important;
+  background-color: #0f172a !important;
 }
 .dark .leaflet-popup-content-wrapper {
   background-color: #0f172a !important;
