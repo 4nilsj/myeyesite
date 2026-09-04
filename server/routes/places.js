@@ -106,6 +106,69 @@ async function nearbyFoursquare(lat, lng, radius, category) {
     });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// BATCH NEARBY SEARCH (fetches all or selected categories server-side)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+router.get('/batch', searchLimiter, async (req, res) => {
+  const { lat, lng, radius = 5000, categories } = req.query;
+  if (!lat || !lng) return res.status(400).json({ error: 'lat and lng are required' });
+
+  const targetCategories = categories
+    ? categories.split(',').filter(c => CATEGORY_MAP[c])
+    : Object.keys(CATEGORY_MAP);
+
+  const latKey = parseFloat(lat).toFixed(3);
+  const lngKey = parseFloat(lng).toFixed(3);
+  const provider = USE_FSQ() ? 'fsq' : 'g';
+  const cacheKey = `${provider}:batch:${latKey}:${lngKey}:${radius}:${targetCategories.slice().sort().join('_')}`;
+
+  try {
+    const cached = await cache.get(cacheKey);
+    if (cached) {
+      console.log(`[Cache] Hit batch: ${cacheKey}`);
+      return res.json(cached);
+    }
+
+    const results = await Promise.allSettled(
+      targetCategories.map(cat =>
+        USE_FSQ()
+          ? nearbyFoursquare(lat, lng, radius, cat)
+          : nearbyGoogle(lat, lng, radius, cat)
+      )
+    );
+
+    const allPlaces = [];
+    const counts = {};
+    const seen = new Set();
+
+    targetCategories.forEach((cat, idx) => {
+      const outcome = results[idx];
+      counts[cat] = 0;
+      if (outcome.status === 'fulfilled') {
+        const list = outcome.value || [];
+        for (const place of list) {
+          if (!seen.has(place.placeId)) {
+            seen.add(place.placeId);
+            allPlaces.push(place);
+            counts[cat] = (counts[cat] || 0) + 1;
+          }
+        }
+      } else {
+        console.warn(`[batch] Category ${cat} fetch failed:`, outcome.reason?.message);
+      }
+    });
+
+    const responseData = { places: allPlaces, total: allPlaces.length, counts };
+    await cache.set(cacheKey, responseData, 24 * 60 * 60);
+    res.json(responseData);
+  } catch (err) {
+    console.error('[batch]', err.message);
+    if (err.code === 403) return res.status(403).json({ error: err.message });
+    res.status(500).json({ error: 'Batch search failed' });
+  }
+});
+
 router.get('/nearby', searchLimiter, async (req, res) => {
   const { lat, lng, radius = 5000, category = 'all' } = req.query;
   if (!lat || !lng) return res.status(400).json({ error: 'lat and lng are required' });

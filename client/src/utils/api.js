@@ -11,6 +11,16 @@ export const reverseGeocode = (lat, lng) =>
 export const fetchNearby = (lat, lng, radius, category) =>
   api.get('/places/nearby', { params: { lat, lng, radius, category } }).then(r => r.data);
 
+export const fetchBatchNearby = (lat, lng, radius, categories) =>
+  api.get('/places/batch', {
+    params: {
+      lat,
+      lng,
+      radius,
+      ...(categories ? { categories: Array.isArray(categories) ? categories.join(',') : categories } : {})
+    }
+  }).then(r => r.data);
+
 export const fetchContact = (placeId) =>
   api.get(`/places/contact/${placeId}`).then(r => r.data);
 

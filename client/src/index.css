@@ -1,23 +1,78 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-50 text-gray-900 antialiased;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+:root {
+  color-scheme: light;
 }
 
-html { scroll-behavior: smooth; }
+.dark {
+  color-scheme: dark;
+}
 
+body {
+  @apply bg-slate-50 text-slate-900 antialiased transition-colors duration-200;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.dark body {
+  @apply bg-slate-950 text-slate-100;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* ─── Scrollbar styling ─────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: rgba(148, 163, 184, 0.35);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(148, 163, 184, 0.6);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background-color: rgba(51, 65, 85, 0.6);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(71, 85, 105, 0.8);
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ─── Place Cards ───────────────────────────────────────────── */
 .place-card {
   @apply transition-all duration-200;
 }
 .place-card:hover {
-  @apply -translate-y-1 shadow-xl shadow-slate-200/60;
+  @apply -translate-y-0.5 shadow-lg shadow-slate-200/70;
+}
+.dark .place-card:hover {
+  @apply shadow-black/40;
+}
+.place-card.is-active {
+  @apply ring-2 ring-indigo-500 shadow-xl shadow-indigo-500/20 scale-[1.01];
+}
+.place-card.is-hovered {
+  @apply ring-2 ring-indigo-400/80 shadow-md shadow-indigo-500/15;
 }
 
+/* ─── Skeleton animations ────────────────────────────────────── */
 @keyframes shimmer {
   0%   { background-position: -1000px 0; }
   100% { background-position:  1000px 0; }
@@ -27,13 +82,61 @@ html { scroll-behavior: smooth; }
   background-size: 1000px 100%;
   animation: shimmer 1.8s infinite linear;
 }
+.dark .skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 1000px 100%;
+  animation: shimmer 1.8s infinite linear;
+}
 
-.scrollbar-hide              { scrollbar-width: none; -ms-overflow-style: none; }
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-
+/* ─── Typography & Gradients ────────────────────────────────── */
 .gradient-text {
-  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+  background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 50%, #EC4899 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.dark .gradient-text {
+  background: linear-gradient(135deg, #818CF8 0%, #A78BFA 50%, #F472B6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ─── Leaflet Map Overrides ─────────────────────────────────── */
+.dark .leaflet-container {
+  background-color: #020617 !important;
+}
+.dark .leaflet-popup-content-wrapper {
+  background-color: #0f172a !important;
+  color: #f1f5f9 !important;
+  border: 1px solid #334155 !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+  border-radius: 1rem !important;
+}
+.dark .leaflet-popup-tip {
+  background-color: #0f172a !important;
+  border: 1px solid #334155 !important;
+}
+
+/* Map marker ripple pulse */
+@keyframes markerRipple {
+  0% {
+    transform: scale(0.85);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.marker-ripple {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 9999px;
+  background: rgba(99, 102, 241, 0.6);
+  animation: markerRipple 1.6s cubic-bezier(0, 0.2, 0.8, 1) infinite;
 }
