@@ -13,18 +13,17 @@ L.Icon.Default.mergeOptions({
 
 const centerIcon = L.divIcon({
   className: '',
-  html: '<div class="w-4 h-4 bg-indigo-600 dark:bg-indigo-400 border-2 border-white dark:border-slate-900 rounded-full shadow-lg ring-4 ring-indigo-500/20"></div>',
+  html: '<div style="width:16px;height:16px;background:#4F46E5;border:3px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.5);"></div>',
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 });
 
 function createPlaceIcon(icon, isActive, isHovered) {
-  const isSpecial = isActive || isHovered;
   const bgClass = isActive
-    ? 'bg-indigo-600 text-white scale-125 ring-4 ring-indigo-400/40 shadow-xl'
+    ? 'bg-indigo-600 text-white scale-125 ring-4 ring-indigo-400/50 shadow-xl'
     : isHovered
-    ? 'bg-indigo-500 text-white scale-110 ring-2 ring-indigo-300/60 shadow-lg'
-    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md border border-slate-200/80 dark:border-slate-700';
+    ? 'bg-indigo-500 text-white scale-110 ring-2 ring-indigo-300 shadow-lg'
+    : 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 shadow-md border border-slate-200 dark:border-slate-700';
 
   const rippleHtml = isActive ? '<span class="marker-ripple"></span>' : '';
 
@@ -44,22 +43,41 @@ function createPlaceIcon(icon, isActive, isHovered) {
   });
 }
 
-// Controller to smoothly pan/zoom when center or selected place changes
-function MapController({ center, selectedPlace }) {
+// Controller to smoothly pan/zoom and resize
+function MapResizerAndController({ center, selectedPlace }) {
   const map = useMap();
   const prevCenter = useRef(null);
 
+  // Invalidate size on mount and window resize so map container never collapses
   useEffect(() => {
-    const key = `${center.lat},${center.lng}`;
-    if (key !== prevCenter.current) {
-      map.setView([center.lat, center.lng], map.getZoom(), { animate: true });
-      prevCenter.current = key;
-    }
-  }, [center.lat, center.lng, map]);
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 150);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
 
+    const onResize = () => map.invalidateSize();
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [map]);
+
+  // Recenter when centroid changes
   useEffect(() => {
-    if (selectedPlace && selectedPlace.lat && selectedPlace.lng) {
-      map.panTo([selectedPlace.lat, selectedPlace.lng], { animate: true, duration: 0.6 });
+    if (!center || typeof center.lat !== 'number' || typeof center.lng !== 'number') return;
+    const key = `${center.lat.toFixed(4)},${center.lng.toFixed(4)}`;
+    if (prevCenter.current && key !== prevCenter.current) {
+      map.setView([center.lat, center.lng], map.getZoom(), { animate: true });
+    }
+    prevCenter.current = key;
+  }, [center, map]);
+
+  // Pan to selected place
+  useEffect(() => {
+    if (selectedPlace && typeof selectedPlace.lat === 'number' && typeof selectedPlace.lng === 'number') {
+      map.panTo([selectedPlace.lat, selectedPlace.lng], { animate: true, duration: 0.5 });
     }
   }, [selectedPlace, map]);
 
@@ -75,7 +93,7 @@ export default function MapView({
   activePlaceId = null,
   hoveredPlaceId = null,
   onSelectPlace,
-  height = '480px',
+  height = 'calc(100vh - 8rem)',
   hideRadiusSlider = false,
 }) {
   const isDark = theme === 'dark';
@@ -83,28 +101,49 @@ export default function MapView({
     ? 'https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}{r}.png'
     : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-  const selectedPlace = places.find(p => p.placeId === activePlaceId);
+  // Sanitize valid places
+  const validPlaces = places.filter(
+    p => p && typeof p.lat === 'number' && typeof p.lng === 'number' && !isNaN(p.lat) && !isNaN(p.lng)
+  );
+
+  const selectedPlace = validPlaces.find(p => p.placeId === activePlaceId);
+
+  const safeCenter = center && typeof center.lat === 'number' && typeof center.lng === 'number'
+    ? center
+    : { lat: 20.5937, lng: 78.9629 };
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-slate-200/90 dark:border-slate-800 shadow-sm flex flex-col bg-white dark:bg-slate-900 transition-colors duration-200">
-      <div className="relative flex-1" style={{ height }}>
+    <div
+      className="rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-md flex flex-col bg-white dark:bg-slate-900 transition-colors duration-200 relative"
+      style={{ height, minHeight: '460px' }}
+    >
+      {/* Top map info badge */}
+      <div className="absolute top-3 left-3 z-[1000] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm flex items-center gap-1.5 pointer-events-none select-none">
+        <span>🗺️</span>
+        <span>{validPlaces.length} places on map</span>
+      </div>
+
+      {/* Main Map Canvas */}
+      <div className="flex-1 w-full relative" style={{ minHeight: '380px' }}>
         <MapContainer
-          center={[center.lat, center.lng]}
+          center={[safeCenter.lat, safeCenter.lng]}
           zoom={13}
-          style={{ width: '100%', height: '100%' }}
+          style={{ width: '100%', height: '100%', minHeight: '380px' }}
           scrollWheelZoom={true}
         >
           <TileLayer
-            key={theme} // Force re-render tile layer upon theme switch
+            key={theme}
+            subdomains="abcd"
+            maxZoom={19}
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>'
             url={tileUrl}
           />
 
-          <MapController center={center} selectedPlace={selectedPlace} />
+          <MapResizerAndController center={safeCenter} selectedPlace={selectedPlace} />
 
           {/* Search radius circle */}
           <Circle
-            center={[center.lat, center.lng]}
+            center={[safeCenter.lat, safeCenter.lng]}
             radius={radius}
             pathOptions={{
               color: isDark ? '#818CF8' : '#4F46E5',
@@ -115,17 +154,17 @@ export default function MapView({
             }}
           />
 
-          {/* Center pinpoint */}
-          <Marker position={[center.lat, center.lng]} icon={centerIcon}>
+          {/* Centroid Pin */}
+          <Marker position={[safeCenter.lat, safeCenter.lng]} icon={centerIcon}>
             <Popup>
               <div className="text-xs font-semibold text-indigo-700 dark:text-indigo-400 py-0.5">
-                📍 Centroid: {center.lat.toFixed(4)}, {center.lng.toFixed(4)}
+                📍 Search Centroid ({safeCenter.lat.toFixed(4)}, {safeCenter.lng.toFixed(4)})
               </div>
             </Popup>
           </Marker>
 
-          {/* Place markers */}
-          {places.map(place => {
+          {/* Place Markers */}
+          {validPlaces.map(place => {
             const isActive = place.placeId === activePlaceId;
             const isHovered = place.placeId === hoveredPlaceId;
             return (
@@ -143,7 +182,7 @@ export default function MapView({
                 <Popup minWidth={220}>
                   <div className="text-sm space-y-1.5 p-0.5">
                     <div className="flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400 font-semibold">
-                      <span>{place.icon}</span>
+                      <span>{place.icon || '📍'}</span>
                       <span>{place.label || place.category}</span>
                     </div>
                     <p className="font-bold text-slate-900 dark:text-white leading-snug text-sm">
@@ -187,9 +226,9 @@ export default function MapView({
         </MapContainer>
       </div>
 
-      {/* Radius slider toolbar */}
+      {/* Radius slider toolbar at bottom */}
       {!hideRadiusSlider && onRadiusChange && (
-        <div className="bg-white/95 dark:bg-slate-900/95 px-4 py-3 flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 transition-colors">
+        <div className="bg-white/95 dark:bg-slate-900/95 px-4 py-3 flex items-center gap-3 border-t border-slate-100 dark:border-slate-800 transition-colors shrink-0">
           <span className="text-xs font-medium text-slate-500 dark:text-slate-400 shrink-0">Radius</span>
           <input
             type="range"
