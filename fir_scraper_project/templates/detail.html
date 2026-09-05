@@ -193,7 +193,14 @@
     <div class="container">
       <div class="nav-bar">
         <a href="/" class="btn btn-secondary">← Back to Dashboard</a>
-        <a href="/download/{{ pdf.path }}" target="_blank" class="btn">Download / Open Original PDF ↗</a>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <a href="/dossier/{{ pdf.name }}" target="_blank" class="btn" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; box-shadow: 0 4px 15px rgba(124, 58, 237, 0.35);">
+            🖨️ Print Police Case Dossier
+          </a>
+          <a href="/download/{{ pdf.path }}" target="_blank" class="btn">
+            Download / Open Original PDF ↗
+          </a>
+        </div>
       </div>
 
       <h1 class="doc-title">📑 {{ pdf.name }}</h1>

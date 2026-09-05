@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>
+      {% if single_mode %}
+        Case Dossier - {{ record.name }}
+      {% else %}
+        Crime Intelligence Dossier - Karnataka State Police
+      {% endif %}
+    </title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --ksp-gold: #d97706;
+        --ksp-navy: #0f172a;
+        --text-dark: #0f172a;
+        --text-muted: #64748b;
+        --border-color: #cbd5e1;
+      }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        background: #f1f5f9;
+        color: var(--text-dark);
+        line-height: 1.5;
+        padding: 30px 20px;
+      }
+      .dossier-wrapper {
+        max-width: 960px;
+        margin: 0 auto;
+      }
+
+      /* Screen Toolbar */
+      .action-toolbar {
+        background: #0f172a;
+        padding: 14px 24px;
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.25);
+        color: #f8fafc;
+        flex-wrap: wrap;
+        gap: 12px;
+      }
+      .btn {
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 0.85rem;
+        cursor: pointer;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+      }
+      .btn-print {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: white;
+      }
+      .btn-print:hover { background: #1e40af; transform: translateY(-1px); }
+      .btn-back {
+        background: #334155;
+        color: #f8fafc;
+      }
+      .btn-back:hover { background: #475569; }
+
+      /* Dossier Sheet */
+      .dossier-sheet {
+        background: #ffffff;
+        border: 2px solid #0f172a;
+        border-radius: 4px;
+        padding: 40px 48px;
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+        position: relative;
+        margin-bottom: 30px;
+      }
+      .dossier-sheet::before {
+        content: "";
+        position: absolute;
+        top: 6px; left: 6px; right: 6px; bottom: 6px;
+        border: 1px solid #94a3b8;
+        pointer-events: none;
+      }
+
+      /* Official Police Header */
+      .police-header {
+        text-align: center;
+        border-bottom: 2px double #0f172a;
+        padding-bottom: 18px;
+        margin-bottom: 24px;
+        position: relative;
+      }
+      .police-emblem {
+        font-size: 2.2rem;
+        margin-bottom: 4px;
+      }
+      .police-title {
+        font-family: 'Cinzel', serif;
+        font-size: 1.35rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #0f172a;
+        text-transform: uppercase;
+      }
+      .police-subtitle {
+        font-size: 0.85rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        color: #b45309;
+        text-transform: uppercase;
+        margin-top: 2px;
+      }
+      .dossier-meta-badge {
+        display: inline-block;
+        background: #0f172a;
+        color: #ffffff;
+        padding: 4px 16px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        margin-top: 10px;
+        border-radius: 4px;
+      }
+
+      /* Case Snapshot Table */
+      .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 16px 20px;
+        border-radius: 6px;
+        margin-bottom: 24px;
+      }
+      .meta-item {
+        display: flex;
+        flex-direction: column;
+      }
+      .meta-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .meta-value {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin-top: 2px;
+      }
+
+      /* Section Headers */
+      .section-heading {
+        font-size: 0.88rem;
+        font-weight: 800;
+        color: #0f172a;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        border-left: 4px solid #b45309;
+        padding-left: 10px;
+        margin: 20px 0 12px 0;
+      }
+
+      /* Data Tables */
+      .dossier-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        font-size: 0.85rem;
+      }
+      .dossier-table th {
+        background: #0f172a;
+        color: #ffffff;
+        text-align: left;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .dossier-table td {
+        padding: 10px 12px;
+        border: 1px solid #e2e8f0;
+        vertical-align: top;
+      }
+      .dossier-table tr:nth-child(even) td {
+        background: #f8fafc;
+      }
+
+      /* Crime Badges */
+      .badge-crime {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 0.78rem;
+        font-weight: 800;
+        border: 1px solid #cbd5e1;
+      }
+      .badge-crime-theft { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+      .badge-crime-cyber { background: #f3e8ff; color: #6b21a8; border-color: #a855f7; }
+      .badge-crime-assault { background: #fee2e2; color: #991b1b; border-color: #ef4444; }
+      .badge-crime-murder { background: #7f1d1d; color: #ffffff; border-color: #450a0a; }
+      .badge-crime-accident { background: #e0f2fe; color: #075985; border-color: #0284c7; }
+      .badge-crime-gang { background: #ffedd5; color: #9a3412; border-color: #f97316; }
+
+      /* Summary Box */
+      .narrative-box {
+        background: #f8fafc;
+        border: 1px solid #cbd5e1;
+        padding: 16px;
+        border-radius: 6px;
+        font-size: 0.88rem;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 24px;
+        white-space: pre-line;
+      }
+
+      /* Signature Footer */
+      .signature-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 50px;
+        padding-top: 20px;
+        border-top: 1px dashed #cbd5e1;
+      }
+      .signature-box {
+        text-align: center;
+        width: 240px;
+      }
+      .signature-line {
+        border-bottom: 1px solid #0f172a;
+        height: 40px;
+        margin-bottom: 6px;
+      }
+      .signature-label {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: #475569;
+        text-transform: uppercase;
+      }
+
+      /* Print Optimizations */
+      @media print {
+        body {
+          background: #ffffff;
+          padding: 0;
+          color: #000000;
+        }
+        .action-toolbar { display: none !important; }
+        .dossier-sheet {
+          box-shadow: none;
+          border: 1px solid #000;
+          padding: 24px;
+          margin-bottom: 0;
+          page-break-after: always;
+        }
+        .dossier-sheet::before { display: none; }
+        .page-break { page-break-before: always; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dossier-wrapper">
+
+      <!-- Screen Actions Toolbar -->
+      <div class="action-toolbar">
+        <div>
+          <strong style="font-size: 1rem;">
+            {% if single_mode %}
+              📄 Official Police Case Dossier
+            {% else %}
+              📊 Crime Intelligence Digest Report ({{ records|length }} Cases)
+            {% endif %}
+          </strong>
+          <div style="font-size: 0.78rem; color: #94a3b8;">Formatted for standard A4 printing and official case records.</div>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn-print" onclick="window.print()">
+            🖨️ Print / Save as PDF
+          </button>
+          <a href="javascript:history.back()" class="btn btn-back">
+            ← Return to Explorer
+          </a>
+        </div>
+      </div>
+
+      {% if single_mode %}
+        <!-- ========================================== -->
+        <!-- SINGLE FIR CASE DOSSIER                    -->
+        <!-- ========================================== -->
+        {% set ctype = get_crime_type(record.acts_sections, record.text) %}
+        {% set badge_class = '' %}
+        {% if ctype == 'Theft' or ctype == 'Robbery' %}{% set badge_class = 'badge-crime-theft' %}
+        {% elif ctype == 'Cyber Scam' %}{% set badge_class = 'badge-crime-cyber' %}
+        {% elif ctype in ['Assault / Fight'] %}{% set badge_class = 'badge-crime-assault' %}
+        {% elif ctype in ['Murder', 'Half Murder'] %}{% set badge_class = 'badge-crime-murder' %}
+        {% elif ctype == 'Accident' %}{% set badge_class = 'badge-crime-accident' %}
+        {% elif ctype == 'Gang Fight' %}{% set badge_class = 'badge-crime-gang' %}
+        {% endif %}
+
+        <div class="dossier-sheet">
+          <div class="police-header">
+            <div class="police-emblem">🛡️</div>
+            <div class="police-title">Karnataka State Police</div>
+            <div class="police-subtitle">Crime Investigation &amp; Case Intelligence Dossier</div>
+            <div class="dossier-meta-badge">CONFIDENTIAL / LAW ENFORCEMENT RECORD</div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">FIR Reference</span>
+              <span class="meta-value" style="font-family: 'JetBrains Mono', monospace; color: #2563eb;">{{ record.name }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Police Station</span>
+              <span class="meta-value">{{ record.station_name or ('Station ' ~ record.station_id) }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Complaint / FIR Date</span>
+              <span class="meta-value">{{ record.complaint_date or record.parsed_date or '—' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Classified Offence</span>
+              <span class="meta-value">
+                <span class="badge-crime {{ badge_class }}">{{ ctype }}</span>
+              </span>
+            </div>
+          </div>
+
+          <div class="section-heading">1. Statutory Acts &amp; Legal Sections Applied</div>
+          <table class="dossier-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Offence Type</th>
+                <th style="width: 50%;">Statutory Sections Applied (BNS / IPC / Special Acts)</th>
+                <th style="width: 25%;">Jurisdiction / Taluk</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>{{ ctype }}</strong></td>
+                <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #1e3a8a;">
+                  {{ record.acts_sections or 'Sections not explicitly specified in digitized text.' }}
+                </td>
+                <td>{{ record.tq or 'Not specified' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="section-heading">2. Involved Parties Registry</div>
+          <table class="dossier-table">
+            <thead>
+              <tr>
+                <th style="width: 20%;">Role</th>
+                <th style="width: 40%;">Name / Identification</th>
+                <th style="width: 40%;">Address / Contact Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong style="color: #047857;">Complainant</strong></td>
+                <td><strong>{{ record.complainant_name or 'Not clearly recorded' }}</strong></td>
+                <td>{{ record.complainant_address or 'Address not clearly found' }}</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #b91c1c;">Accused / Suspect</strong></td>
+                <td><strong>{{ record.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</strong></td>
+                <td>{{ record.accused_address or 'Address not clearly found' }}</td>
+              </tr>
+              <tr>
+                <td><strong style="color: #4338ca;">Victim</strong></td>
+                <td>{{ record.victim_name or 'Same as complainant / Not recorded' }}</td>
+                <td>{{ record.victim_address or '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="section-heading">3. Incident Location &amp; Place of Occurrence</div>
+          <div class="meta-grid" style="margin-bottom: 18px;">
+            <div class="meta-item" style="grid-column: span 2;">
+              <span class="meta-label">Location / Landmark</span>
+              <span class="meta-value">{{ record.location or 'Location not specified' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Taluk (TQ)</span>
+              <span class="meta-value">{{ record.tq or '—' }}</span>
+            </div>
+          </div>
+
+          <div class="section-heading">4. Case Synopsis &amp; Narrative Brief</div>
+          <div class="narrative-box">
+{{ record.plain_summary or record.summary or 'No narrative text extracted.' }}
+          </div>
+
+          <div class="section-heading">5. Physical &amp; Digital Document Provenance</div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px;">
+            Document Size: <strong>{{ record.size_mb }} MB</strong> | Pages: <strong>{{ record.pages }}</strong> |
+            OCR Mode: <strong>{% if record.ocr_used %}Tesseract Kannada/English OCR{% else %}Direct Digital Extraction{% endif %}</strong> |
+            Status: <strong>{{ record.ocr_status or 'Indexed' }}</strong>
+          </div>
+
+          <div class="signature-row">
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <div class="signature-label">Investigating Officer (I.O.)</div>
+              <div style="font-size: 0.7rem; color: #94a3b8;">Signature &amp; Rank</div>
+            </div>
+            <div class="signature-box">
+              <div style="width: 70px; height: 70px; border: 2px dashed #94a3b8; border-radius: 50%; margin: 0 auto 6px auto; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: #94a3b8; font-weight: 700;">
+                STATION SEAL
+              </div>
+              <div class="signature-label">Station Seal</div>
+            </div>
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <div class="signature-label">Station House Officer (S.H.O.)</div>
+              <div style="font-size: 0.7rem; color: #94a3b8;">Endorsement &amp; Date</div>
+            </div>
+          </div>
+        </div>
+
+      {% else %}
+        <!-- ========================================== -->
+        <!-- BATCH FILTERED CRIME REPORT                -->
+        <!-- ========================================== -->
+        <div class="dossier-sheet">
+          <div class="police-header">
+            <div class="police-emblem">🛡️</div>
+            <div class="police-title">Karnataka State Police</div>
+            <div class="police-subtitle">Crime Intelligence Digest &amp; Case Registry Report</div>
+            <div class="dossier-meta-badge">EXECUTIVE SUMMARY REPORT</div>
+          </div>
+
+          <div class="meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">Total Cases In View</span>
+              <span class="meta-value" style="color: #2563eb; font-size: 1.2rem;">{{ records|length }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Selected Station</span>
+              <span class="meta-value">{{ station_name or 'All Police Stations' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Filter Category</span>
+              <span class="meta-value">{{ category or 'All Crime Offenses' }}</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Report Date</span>
+              <span class="meta-value">{{ report_date }}</span>
+            </div>
+          </div>
+
+          <div class="section-heading">Master FIR Register</div>
+          <table class="dossier-table">
+            <thead>
+              <tr>
+                <th style="width: 14%;">FIR Ref</th>
+                <th style="width: 12%;">Date</th>
+                <th style="width: 18%;">Station</th>
+                <th style="width: 18%;">Crime Type</th>
+                <th style="width: 20%;">Complainant / Accused</th>
+                <th style="width: 18%;">Acts &amp; Sections</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for rec in records %}
+                {% set ctype = get_crime_type(rec.acts_sections, rec.text) %}
+                <tr>
+                  <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700;">
+                    <a href="/dossier/{{ rec.name }}" style="color: #2563eb; text-decoration: none;">
+                      {{ rec.name }}
+                    </a>
+                  </td>
+                  <td>{{ rec.complaint_date or rec.parsed_date or '—' }}</td>
+                  <td>{{ rec.station_name or rec.station_id }}</td>
+                  <td><strong>{{ ctype }}</strong></td>
+                  <td>
+                    <div><strong>C:</strong> {{ rec.complainant_name or '—' }}</div>
+                    <div style="color: #b91c1c; font-size: 0.78rem;"><strong>A:</strong> {{ rec.accused_name or 'Unknown' }}</div>
+                  </td>
+                  <td style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #1e3a8a;">
+                    {{ rec.acts_sections or '—' }}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+
+          <div style="text-align: center; margin-top: 30px; font-size: 0.75rem; color: #94a3b8;">
+            End of Intelligence Digest Report • Generated by FIR Intelligence Explorer • Total Records: {{ records|length }}
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </body>
+</html>

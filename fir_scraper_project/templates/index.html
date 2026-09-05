@@ -919,8 +919,36 @@
         </div>
       {% endif %}
 
-      <!-- Records Table -->
+      <!-- Records Table Section -->
       {% if records %}
+        <!-- Export & Reports Action Toolbar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+          <div style="font-size: 0.88rem; color: var(--text-secondary);">
+            Showing <strong style="color: #f1f5f9;">{{ records|length }}</strong> FIR documents in active view
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <a id="btn-export-excel"
+               href="/export/excel?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}&category={{ category }}&start_fir={{ start_fir or '' }}&end_fir={{ end_fir or '' }}"
+               class="btn"
+               style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; padding: 7px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.25);">
+              📊 Export to Excel (.xlsx)
+            </a>
+            <a id="btn-export-csv"
+               href="/export/csv?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}&category={{ category }}&start_fir={{ start_fir or '' }}&end_fir={{ end_fir or '' }}"
+               class="btn"
+               style="background: rgba(30, 41, 59, 0.9); color: #94a3b8; border: 1px solid var(--border-color); padding: 7px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 600; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+              📑 Export to CSV
+            </a>
+            <a id="btn-print-dossier"
+               href="/dossier?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}&category={{ category }}&start_fir={{ start_fir or '' }}&end_fir={{ end_fir or '' }}"
+               target="_blank"
+               class="btn"
+               style="background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: #ffffff; padding: 7px 16px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+              🖨️ Print Crime Dossier
+            </a>
+          </div>
+        </div>
+
         <div class="table-container">
           <table>
             <thead>
@@ -1003,8 +1031,9 @@
                   </td>
                   <td style="text-align: right; white-space: nowrap;">
                     <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                      <a href="/pdf/{{ pdf.name }}?q={{ query }}" class="btn-action-view">👁️ View</a>
-                      <a href="/download/{{ pdf.name }}" class="btn-action-dl">📥 PDF</a>
+                      <a href="/pdf/{{ pdf.name }}?q={{ query }}" class="btn-action-view" title="View Case & Inline PDF">👁️ View</a>
+                      <a href="/dossier/{{ pdf.name }}" target="_blank" class="btn-action-view" style="background: rgba(168, 85, 247, 0.15); color: #c084fc; border-color: rgba(168, 85, 247, 0.35);" title="Print Official Police Dossier">🖨️ Dossier</a>
+                      <a href="/download/{{ pdf.name }}" class="btn-action-dl" title="Download Raw PDF File">📥 PDF</a>
                     </div>
                   </td>
                 </tr>

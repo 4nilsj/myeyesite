@@ -57,8 +57,10 @@ from core.repository import (
     get_station_stats,
     list_pdfs,
 )
+from core.export import generate_csv_data, generate_excel_workbook
 from core.tracker import ScrapeProgressTracker, progress_tracker
 from routes.api import register_api_routes
+from routes.export import register_export_routes
 from routes.web import register_web_routes
 from services.scraper_service import _async_scrape_worker
 
@@ -98,6 +100,7 @@ def create_app() -> Flask:
 
     register_web_routes(application)
     register_api_routes(application)
+    register_export_routes(application)
     return application
 
 

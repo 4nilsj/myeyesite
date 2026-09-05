@@ -1,0 +1,127 @@
+import io
+import shutil
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+# Ensure root project directory is in sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import fitz
+import openpyxl
+
+import app
+from core.db import _init_db, _save_record_to_db
+from core.export import generate_csv_data, generate_excel_workbook
+
+
+class TestExportAndDossier(unittest.TestCase):
+    def setUp(self):
+        self.temp_dir = tempfile.mkdtemp()
+        self.addCleanup(lambda: shutil.rmtree(self.temp_dir, ignore_errors=True))
+
+        self.test_db_path = Path(self.temp_dir) / "test_export.db"
+        self.test_pdf_dir = Path(self.temp_dir) / "pdfs"
+        self.test_pdf_dir.mkdir(parents=True, exist_ok=True)
+
+        self.original_db_file = app.DB_FILE
+        self.original_pdf_dir = app.PDF_DIR
+
+        app.DB_FILE = self.test_db_path
+        app.PDF_DIR = self.test_pdf_dir
+
+        _init_db()
+
+        self.sample_record = {
+            "name": "fir_ps717_0001.pdf",
+            "station_id": "717",
+            "station_name": "Madbool Station (717)",
+            "complaint_date": "10/05/2024",
+            "parsed_date": "2024-05-10",
+            "location": "Madbool Main Road",
+            "tq": "chittapur",
+            "complainant_name": "Ramesh Kumar",
+            "complainant_address": "Madbool Village",
+            "accused_name": "Suresh Gowda",
+            "accused_address": "Kalagi",
+            "victim_name": "Ramesh Kumar",
+            "victim_address": "Madbool Village",
+            "pages": 2,
+            "size_mb": 0.35,
+            "ocr_used": 0,
+            "ocr_status": "Direct",
+            "summary": "Theft of motorcycle from front yard",
+            "plain_summary": "Theft of motorcycle from front yard",
+            "acts_sections": "303 BNS",
+            "text": "Full complaint text for motorcycle theft",
+        }
+        _save_record_to_db(self.sample_record, mtime=1700000000, size=350000)
+
+        # Create physical dummy PDF so single dossier / pdf detail tests find it
+        dummy_pdf_path = self.test_pdf_dir / "fir_ps717_0001.pdf"
+        doc = fitz.open()
+        page = doc.new_page()
+        page.insert_text((50, 50), "Dummy FIR PDF Content")
+        doc.save(str(dummy_pdf_path))
+        doc.close()
+
+        app.app.config["TESTING"] = True
+        self.client = app.app.test_client()
+
+    def tearDown(self):
+        app.DB_FILE = self.original_db_file
+        app.PDF_DIR = self.original_pdf_dir
+
+    def test_generate_csv_data(self):
+        csv_str = generate_csv_data([self.sample_record])
+        # Check UTF-8 BOM
+        self.assertTrue(csv_str.startswith("\ufeff"))
+        self.assertIn("FIR No.", csv_str)
+        self.assertIn("fir_ps717_0001.pdf", csv_str)
+        self.assertIn("Ramesh Kumar", csv_str)
+        self.assertIn("Theft", csv_str)
+
+    def test_generate_excel_workbook(self):
+        xlsx_bytes = generate_excel_workbook([self.sample_record])
+        self.assertIsInstance(xlsx_bytes, bytes)
+        self.assertGreater(len(xlsx_bytes), 1000)
+
+        # Verify workbook is readable by openpyxl
+        wb = openpyxl.load_workbook(io.BytesIO(xlsx_bytes))
+        self.assertIn("FIR Crime Records", wb.sheetnames)
+        ws = wb["FIR Crime Records"]
+        self.assertEqual(ws.cell(row=1, column=1).value, "FIR No.")
+        self.assertEqual(ws.cell(row=2, column=2).value, "fir_ps717_0001.pdf")
+        self.assertEqual(ws.cell(row=2, column=6).value, "Theft")
+
+    def test_export_csv_endpoint(self):
+        response = self.client.get("/export/csv?station_id=717")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/csv", response.headers.get("Content-Type", ""))
+        self.assertIn("attachment; filename=", response.headers.get("Content-Disposition", ""))
+        self.assertIn(b"fir_ps717_0001.pdf", response.data)
+
+    def test_export_excel_endpoint(self):
+        response = self.client.get("/export/excel?station_id=717")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("spreadsheetml", response.headers.get("Content-Type", ""))
+        self.assertIn("attachment; filename=", response.headers.get("Content-Disposition", ""))
+        self.assertGreater(len(response.data), 1000)
+
+    def test_batch_dossier_endpoint(self):
+        response = self.client.get("/dossier?station_id=717")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Crime Intelligence Digest", response.data)
+        self.assertIn(b"fir_ps717_0001.pdf", response.data)
+
+    def test_single_dossier_endpoint(self):
+        response = self.client.get("/dossier/fir_ps717_0001.pdf")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Official Police Case Dossier", response.data)
+        self.assertIn(b"Ramesh Kumar", response.data)
+        self.assertIn(b"Investigating Officer", response.data)
+
+
+if __name__ == "__main__":
+    unittest.main()
