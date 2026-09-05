@@ -30,7 +30,7 @@
         padding: 30px 20px;
       }
       .dossier-wrapper {
-        max-width: 960px;
+        max-width: 1120px;
         margin: 0 auto;
       }
 
@@ -77,10 +77,11 @@
         background: #ffffff;
         border: 2px solid #0f172a;
         border-radius: 4px;
-        padding: 40px 48px;
+        padding: 36px 40px;
         box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
         position: relative;
         margin-bottom: 30px;
+        overflow: hidden;
       }
       .dossier-sheet::before {
         content: "";
@@ -138,7 +139,7 @@
         gap: 16px;
         background: #f8fafc;
         border: 1px solid #e2e8f0;
-        padding: 16px 20px;
+        padding: 16px;
         border-radius: 6px;
         margin-bottom: 24px;
       }
@@ -155,7 +156,7 @@
       }
       .meta-value {
         font-size: 0.95rem;
-        font-weight: 700;
+        font-weight: 600;
         color: #0f172a;
         margin-top: 2px;
       }
@@ -173,26 +174,38 @@
       }
 
       /* Data Tables */
+      .dossier-table-container {
+        width: 100%;
+        overflow-x: auto;
+        margin-bottom: 20px;
+        -webkit-overflow-scrolling: touch;
+      }
       .dossier-table {
         width: 100%;
+        table-layout: fixed;
         border-collapse: collapse;
-        margin-bottom: 20px;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
       }
       .dossier-table th {
         background: #0f172a;
         color: #ffffff;
         text-align: left;
-        padding: 8px 12px;
-        font-size: 0.75rem;
+        padding: 9px 10px;
+        font-size: 0.72rem;
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
       .dossier-table td {
-        padding: 10px 12px;
+        padding: 9px 10px;
         border: 1px solid #e2e8f0;
         vertical-align: top;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        word-break: break-word;
       }
       .dossier-table tr:nth-child(even) td {
         background: #f8fafc;
@@ -201,11 +214,12 @@
       /* Crime Badges */
       .badge-crime {
         display: inline-block;
-        padding: 3px 10px;
+        padding: 3px 9px;
         border-radius: 12px;
-        font-size: 0.78rem;
+        font-size: 0.75rem;
         font-weight: 800;
         border: 1px solid #cbd5e1;
+        white-space: nowrap;
       }
       .badge-crime-theft { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
       .badge-crime-cyber { background: #f3e8ff; color: #6b21a8; border-color: #a855f7; }
@@ -213,6 +227,9 @@
       .badge-crime-murder { background: #7f1d1d; color: #ffffff; border-color: #450a0a; }
       .badge-crime-accident { background: #e0f2fe; color: #075985; border-color: #0284c7; }
       .badge-crime-gang { background: #ffedd5; color: #9a3412; border-color: #f97316; }
+      .badge-crime-threats { background: #fef9c3; color: #854d0e; border-color: #eab308; }
+      .badge-crime-kidnap { background: #fce7f3; color: #9d174d; border-color: #ec4899; }
+      .badge-crime-liquor { background: #ecfdf5; color: #065f46; border-color: #10b981; }
 
       /* Summary Box */
       .narrative-box {
@@ -258,16 +275,31 @@
           padding: 0;
           color: #000000;
         }
+        .dossier-wrapper {
+          max-width: 100% !important;
+          width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
         .action-toolbar { display: none !important; }
         .dossier-sheet {
           box-shadow: none;
           border: 1px solid #000;
-          padding: 24px;
+          padding: 20px 24px;
           margin-bottom: 0;
           page-break-after: always;
         }
         .dossier-sheet::before { display: none; }
         .page-break { page-break-before: always; }
+        .dossier-table {
+          width: 100% !important;
+          table-layout: fixed !important;
+          font-size: 0.72rem !important;
+        }
+        .dossier-table th, .dossier-table td {
+          padding: 5px 6px !important;
+          word-break: break-word !important;
+        }
       }
     </style>
   </head>
@@ -463,40 +495,54 @@
           </div>
 
           <div class="section-heading">Master FIR Register</div>
-          <table class="dossier-table">
-            <thead>
-              <tr>
-                <th style="width: 14%;">FIR Ref</th>
-                <th style="width: 12%;">Date</th>
-                <th style="width: 18%;">Station</th>
-                <th style="width: 18%;">Crime Type</th>
-                <th style="width: 20%;">Complainant / Accused</th>
-                <th style="width: 18%;">Acts &amp; Sections</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for rec in records %}
-                {% set ctype = get_crime_type(rec.acts_sections, rec.text) %}
+          <div class="dossier-table-container">
+            <table class="dossier-table">
+              <thead>
                 <tr>
-                  <td style="font-family: 'JetBrains Mono', monospace; font-weight: 700;">
-                    <a href="/dossier/{{ rec.name }}" style="color: #2563eb; text-decoration: none;">
-                      {{ rec.name }}
-                    </a>
-                  </td>
-                  <td>{{ rec.complaint_date or rec.parsed_date or '—' }}</td>
-                  <td>{{ rec.station_name or rec.station_id }}</td>
-                  <td><strong>{{ ctype }}</strong></td>
-                  <td>
-                    <div><strong>C:</strong> {{ rec.complainant_name or '—' }}</div>
-                    <div style="color: #b91c1c; font-size: 0.78rem;"><strong>A:</strong> {{ rec.accused_name or 'Unknown' }}</div>
-                  </td>
-                  <td style="font-size: 0.75rem; font-family: 'JetBrains Mono', monospace; color: #1e3a8a;">
-                    {{ rec.acts_sections or '—' }}
-                  </td>
+                  <th style="width: 14%;">FIR Ref</th>
+                  <th style="width: 11%;">Date</th>
+                  <th style="width: 15%;">Station</th>
+                  <th style="width: 15%;">Crime Type</th>
+                  <th style="width: 22%;">Complainant / Accused</th>
+                  <th style="width: 23%;">Acts &amp; Sections</th>
                 </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {% for rec in records %}
+                  {% set ctype = get_crime_type(rec.acts_sections, rec.text) %}
+                  {% set badge_class = 'badge-crime-theft' if ctype in ['Theft', 'Robbery']
+                    else 'badge-crime-cyber' if ctype == 'Cyber Scam'
+                    else 'badge-crime-assault' if ctype == 'Assault / Fight'
+                    else 'badge-crime-murder' if ctype in ['Murder', 'Half Murder']
+                    else 'badge-crime-accident' if ctype == 'Accident'
+                    else 'badge-crime-gang' if ctype == 'Gang Fight'
+                    else 'badge-crime-threats' if ctype in ['Threats & Abuse', 'Woman Harassment', 'Domestic Cruelty']
+                    else 'badge-crime-kidnap' if ctype == 'Kidnapping'
+                    else 'badge-crime-liquor' if ctype == 'Illegal Liquor'
+                    else '' %}
+                  <tr>
+                    <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; font-weight: 700; word-break: break-all;">
+                      <a href="/dossier/{{ rec.name }}" style="color: #2563eb; text-decoration: none;">
+                        {{ rec.name }}
+                      </a>
+                    </td>
+                    <td style="font-size: 0.78rem; white-space: nowrap;">{{ rec.complaint_date or rec.parsed_date or '—' }}</td>
+                    <td style="font-size: 0.78rem;">{{ rec.station_name or rec.station_id }}</td>
+                    <td>
+                      <span class="badge-crime {{ badge_class }}">{{ ctype }}</span>
+                    </td>
+                    <td style="font-size: 0.78rem;">
+                      <div><strong>C:</strong> {{ rec.complainant_name or '—' }}</div>
+                      <div style="color: #b91c1c; font-size: 0.75rem; margin-top: 3px;"><strong>A:</strong> {{ rec.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</div>
+                    </td>
+                    <td style="font-size: 0.72rem; font-family: 'JetBrains Mono', monospace; color: #1e3a8a; word-break: break-word; line-height: 1.35;">
+                      {{ rec.acts_sections or '—' }}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
 
           <div style="text-align: center; margin-top: 30px; font-size: 0.75rem; color: #94a3b8;">
             End of Intelligence Digest Report • Generated by FIR Intelligence Explorer • Total Records: {{ records|length }}
