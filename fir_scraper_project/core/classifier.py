@@ -2,6 +2,25 @@
 
 import re
 
+CRIME_CATEGORIES: list[dict[str, str]] = [
+    {"label": "Theft", "icon": "🔓", "css": "badge-crime-theft"},
+    {"label": "Cyber Scam", "icon": "💻", "css": "badge-crime-cyber"},
+    {"label": "Assault / Fight", "icon": "🥊", "css": "badge-crime-assault"},
+    {"label": "Accident", "icon": "🚗", "css": "badge-crime-accident"},
+    {"label": "Gang Fight", "icon": "👥", "css": "badge-crime-gang"},
+    {"label": "Half Murder", "icon": "🗡️", "css": "badge-crime-murder"},
+    {"label": "Murder", "icon": "☠️", "css": "badge-crime-murder"},
+    {"label": "Kidnapping", "icon": "🚨", "css": "badge-crime-kidnap"},
+    {"label": "Robbery", "icon": "💰", "css": "badge-crime-theft"},
+    {"label": "Land Dispute / Trespass", "icon": "🏡", "css": "badge-crime-land"},
+    {"label": "Threats & Abuse", "icon": "⚠️", "css": "badge-crime-threats"},
+    {"label": "Illegal Liquor", "icon": "🍾", "css": "badge-crime-liquor"},
+    {"label": "Gambling", "icon": "🎲", "css": "badge-crime-gambling"},
+    {"label": "Woman Harassment", "icon": "🛡️", "css": "badge-crime-threats"},
+    {"label": "Domestic Cruelty", "icon": "🏠", "css": "badge-crime-threats"},
+    {"label": "General Offense", "icon": "⚖️", "css": "badge-crime"},
+]
+
 
 def get_crime_type_badge(acts_str: str = "", text: str = "") -> str:
     acts_clean = (acts_str or "").upper()

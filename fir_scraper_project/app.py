@@ -11,7 +11,7 @@ from pathlib import Path
 from flask import Flask
 
 from core import classifier, config, db, extractor, repository, tracker
-from core.classifier import get_crime_type_badge
+from core.classifier import CRIME_CATEGORIES, get_crime_type_badge
 from core.config import (
     BASE_DIR,
     CACHE_FILE,
@@ -51,6 +51,7 @@ from core.extractor import (
 from core.repository import (
     _get_highest_fir_number,
     _get_missing_fir_numbers,
+    get_category_counts,
     get_highest_firs_summary,
     get_station_counts,
     get_station_stats,

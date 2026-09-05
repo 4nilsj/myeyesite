@@ -376,6 +376,76 @@
         color: #f472b6;
         border: 1px solid rgba(236, 72, 153, 0.35);
       }
+      .badge-crime-gang {
+        background: rgba(234, 88, 12, 0.18);
+        color: #fdba74;
+        border: 1px solid rgba(234, 88, 12, 0.4);
+      }
+      .badge-crime-kidnap {
+        background: rgba(220, 38, 38, 0.25);
+        color: #fca5a5;
+        border: 1px solid #ef4444;
+      }
+      .badge-crime-land {
+        background: rgba(13, 148, 136, 0.18);
+        color: #5eead4;
+        border: 1px solid rgba(13, 148, 136, 0.4);
+      }
+      .badge-crime-liquor {
+        background: rgba(16, 185, 129, 0.18);
+        color: #6ee7b7;
+        border: 1px solid rgba(16, 185, 129, 0.4);
+      }
+      .badge-crime-gambling {
+        background: rgba(217, 70, 239, 0.18);
+        color: #f0abfc;
+        border: 1px solid rgba(217, 70, 239, 0.4);
+      }
+
+      /* Crime Category Quick Filter Bar */
+      .crime-quick-filters {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px dashed rgba(255, 255, 255, 0.08);
+      }
+      .btn-crime-pill {
+        padding: 5px 13px;
+        border-radius: 16px;
+        font-size: 0.76rem;
+        font-weight: 600;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(15, 23, 42, 0.6);
+        color: var(--text-secondary);
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .btn-crime-pill:hover {
+        transform: translateY(-1px);
+        background: rgba(30, 41, 59, 0.9);
+        color: var(--text-primary);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+      .btn-crime-pill.active {
+        background: linear-gradient(135deg, rgba(37, 99, 235, 0.35) 0%, rgba(124, 58, 237, 0.45) 100%);
+        color: #ffffff;
+        border-color: #38bdf8;
+        box-shadow: 0 0 14px rgba(56, 189, 248, 0.35);
+      }
+      .crime-bubble {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 1px 7px;
+        border-radius: 10px;
+        font-size: 0.7rem;
+        font-weight: 700;
+      }
 
       .btn-action-view {
         background: rgba(56, 189, 248, 0.15);
@@ -720,8 +790,8 @@
       <!-- Quick Station Filters & Search Card -->
       <div class="filter-card">
         <div class="station-quick-filters">
-          <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 4px;">📍 Station Filter:</span>
-          <a id="filter-all" href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}"
+          <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 4px;">📍 Station:</span>
+          <a id="filter-all" href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&category={{ category }}"
              class="btn-station btn-all {% if not station_id %}active{% endif %}">
             All Stations
             <span class="count-bubble">{{ station_counts.values() | sum }}</span>
@@ -732,7 +802,7 @@
             {% set h = st.get('highest', 0) %}
             {% set css_cls = 'btn-' + sid if sid in ['717','718','2256'] else 'btn-all' %}
             <a id="filter-station-{{ sid }}"
-               href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ sid }}"
+               href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ sid }}&category={{ category }}"
                class="btn-station {{ css_cls }} {% if station_id == sid %}active{% endif %}">
               {{ sname }}
               {% if cnt > 0 %}<span class="count-bubble">{{ cnt }} Saved (#{{ "%04d"|format(h) }})</span>{% endif %}
@@ -740,16 +810,50 @@
           {% endfor %}
         </div>
 
-        <form class="filter-form" method="get" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: end;">
+        <!-- Crime Category Quick Filter Bar -->
+        <div class="crime-quick-filters">
+          <span style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: 0.05em; margin-right: 4px;">⚡ Crime Type:</span>
+          <a id="filter-cat-all"
+             href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}"
+             class="btn-crime-pill {% if not category %}active{% endif %}">
+            ⚖️ All Crimes
+            <span class="crime-bubble">{{ category_counts.values() | sum }}</span>
+          </a>
+          {% for cat in crime_categories %}
+            {% set cnt = category_counts.get(cat.label, 0) %}
+            {% if cnt > 0 %}
+              <a id="filter-cat-{{ cat.label|lower|replace(' ', '-')|replace('/', '') }}"
+                 href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}&category={{ cat.label }}"
+                 class="btn-crime-pill {% if category == cat.label %}active{% endif %}">
+                <span>{{ cat.icon }}</span> {{ cat.label }}
+                <span class="crime-bubble">{{ cnt }}</span>
+              </a>
+            {% endif %}
+          {% endfor %}
+        </div>
+
+        <form class="filter-form" method="get" style="display: flex; gap: 14px; flex-wrap: wrap; align-items: end; margin-top: 18px;">
           <div class="input-group" style="flex: 2; min-width: 220px;">
             <label>Full-Text Search Query</label>
             <input name="q" value="{{ query }}" placeholder="Search Acts, penal codes, names, location..." />
           </div>
-          <div class="input-group" style="min-width: 180px;">
+          <div class="input-group" style="min-width: 170px;">
+            <label>Crime Category</label>
+            <select name="category" id="category-select">
+              <option value="" {% if not category %}selected{% endif %}>All Crime Types</option>
+              {% for cat in crime_categories %}
+                {% set cnt = category_counts.get(cat.label, 0) %}
+                <option value="{{ cat.label }}" {% if category == cat.label %}selected{% endif %}>
+                  {{ cat.icon }} {{ cat.label }} ({{ cnt }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="input-group" style="min-width: 160px;">
             <label>Taluk (TQ)</label>
             <input name="tq" value="{{ tq }}" placeholder="e.g. Bangarapet" />
           </div>
-          <div class="input-group" style="min-width: 180px;">
+          <div class="input-group" style="min-width: 170px;">
             <label>Police Station</label>
             <select name="station_id" id="station-select">
               <option value="" {% if not station_id %}selected{% endif %}>All Stations</option>
@@ -758,7 +862,7 @@
               {% endfor %}
             </select>
           </div>
-          <div class="input-group" style="min-width: 200px;">
+          <div class="input-group" style="min-width: 190px;">
             <label>Sort Order</label>
             <select name="date_order">
               <option value="fir_desc" {% if date_order == 'fir_desc' or not date_order %}selected{% endif %}>FIR Number Descending (0099 → 0001)</option>
@@ -769,12 +873,27 @@
           </div>
           <div style="display: flex; gap: 8px;">
             <button type="submit" class="btn-primary" style="padding: 11px 18px;">Filter View</button>
-            {% if query or tq or station_id or start_fir %}
+            {% if query or tq or station_id or category or start_fir %}
               <a href="/" class="btn-station btn-all" style="padding: 11px 16px; border-radius: 10px; opacity: 1;">Reset</a>
             {% endif %}
           </div>
         </form>
       </div>
+
+      <!-- Active Category Filter Indicator Banner -->
+      {% if category %}
+        <div style="margin-bottom: 20px; padding: 14px 20px; background: rgba(30, 41, 59, 0.85); border: 1px solid #38bdf8; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; backdrop-filter: blur(12px); box-shadow: 0 4px 20px rgba(56, 189, 248, 0.2);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size: 1.2rem;">⚡</span>
+            <span style="font-size: 0.9rem; color: #f1f5f9; font-weight: 600;">
+              Filtered by Crime Category: <strong style="color: #38bdf8;">{{ category }}</strong> ({{ records|length }} matching FIRs)
+            </span>
+          </div>
+          <a href="/?q={{ query }}&tq={{ tq }}&date_order={{ date_order }}&station_id={{ station_id }}" style="font-size: 0.8rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); padding: 5px 12px; border-radius: 8px; text-decoration: none; font-weight: 700; transition: all 0.2s ease;">
+            ✕ Clear Category Filter
+          </a>
+        </div>
+      {% endif %}
 
       <!-- Unregistered FIRs Explanation Banner -->
       {% if station_id and station_stats.get(station_id) and station_stats[station_id].missing_count > 0 and not start_fir %}
@@ -828,24 +947,39 @@
                   <td>
                     {% set ctype = get_crime_type(pdf.acts_sections, pdf.text) %}
                     {% set badge_class = '' %}
-                    {% if ctype == 'Theft' %}
+                    {% if ctype == 'Theft' or ctype == 'Robbery' %}
                       {% set badge_class = 'badge-crime-theft' %}
-                    {% elif ctype in ['Gang Fight', 'Assault / Fight'] %}
+                    {% elif ctype == 'Gang Fight' %}
+                      {% set badge_class = 'badge-crime-gang' %}
+                    {% elif ctype == 'Assault / Fight' %}
                       {% set badge_class = 'badge-crime-assault' %}
                     {% elif ctype in ['Half Murder', 'Murder'] %}
                       {% set badge_class = 'badge-crime-murder' %}
+                    {% elif ctype == 'Kidnapping' %}
+                      {% set badge_class = 'badge-crime-kidnap' %}
                     {% elif ctype == 'Accident' %}
                       {% set badge_class = 'badge-crime-accident' %}
                     {% elif ctype == 'Cyber Scam' %}
                       {% set badge_class = 'badge-crime-cyber' %}
-                    {% elif ctype == 'Threats & Abuse' %}
+                    {% elif ctype in ['Threats & Abuse', 'Woman Harassment', 'Domestic Cruelty'] %}
                       {% set badge_class = 'badge-crime-threats' %}
+                    {% elif ctype == 'Illegal Liquor' %}
+                      {% set badge_class = 'badge-crime-liquor' %}
+                    {% elif ctype == 'Gambling' %}
+                      {% set badge_class = 'badge-crime-gambling' %}
+                    {% elif ctype == 'Land Dispute / Trespass' %}
+                      {% set badge_class = 'badge-crime-land' %}
                     {% endif %}
                     
                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                      <span class="badge-crime {{ badge_class }}">
+                      <a href="/?q={{ query }}&station_id={{ station_id }}&category={{ ctype }}&date_order={{ date_order }}"
+                         class="badge-crime {{ badge_class }}"
+                         title="Filter records by {{ ctype }}"
+                         style="text-decoration: none; cursor: pointer; transition: transform 0.15s ease;"
+                         onmouseover="this.style.transform='scale(1.05)'"
+                         onmouseout="this.style.transform='scale(1)'">
                         ⚡ {{ ctype }}
-                      </span>
+                      </a>
                       {% if pdf.acts_sections %}
                         <span style="color: var(--text-muted); font-size: 0.72rem; font-family: monospace;" title="{{ pdf.acts_sections }}">
                           {{ pdf.acts_sections[:35] }}{% if pdf.acts_sections|length > 35 %}...{% endif %}

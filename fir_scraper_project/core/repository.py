@@ -7,6 +7,7 @@ import sqlite3
 from typing import Any
 
 from core import config
+from core.classifier import get_crime_type_badge
 from core.config import (
     STATION_MAP,
     _extract_fir_number_from_filename,
@@ -25,6 +26,7 @@ def list_pdfs(
     station_id: str = "",
     start_fir: int | None = None,
     end_fir: int | None = None,
+    category: str = "",
 ) -> list[dict[str, Any]]:
     """Retrieve and filter FIR documents using indexed SQL queries and FTS5 search."""
     if not config.PDF_DIR.exists():
@@ -120,6 +122,13 @@ def list_pdfs(
             except Exception:
                 pass
 
+    if category and category.strip().lower() != "all":
+        cat_clean = category.strip().lower()
+        records = [
+            r for r in records
+            if get_crime_type_badge(r.get("acts_sections", ""), r.get("text", "")).strip().lower() == cat_clean
+        ]
+
     def _get_fir_num(r: dict[str, Any]) -> int:
         num = _extract_fir_number_from_filename(r.get("name", ""))
         return num if num is not None else 999999
@@ -137,6 +146,30 @@ def list_pdfs(
         records.sort(key=lambda r: _get_fir_num(r), reverse=True)
 
     return records
+
+
+def get_category_counts(station_id: str = "") -> dict[str, int]:
+    """Calculate frequency count of each crime category, optionally filtered by station."""
+    counts: dict[str, int] = {}
+    params: list[Any] = []
+    where_sql = ""
+    if station_id and station_id.lower() != "all":
+        where_sql = "WHERE station_id = ?"
+        params.append(station_id)
+    with get_db() as conn:
+        rows = conn.execute(f"SELECT acts_sections, data_json FROM fir_documents {where_sql};", params).fetchall()
+        for r in rows:
+            acts = r["acts_sections"] or ""
+            text = ""
+            if not acts:
+                try:
+                    data = json.loads(r["data_json"])
+                    text = data.get("text", "")
+                except Exception:
+                    pass
+            cat = get_crime_type_badge(acts, text)
+            counts[cat] = counts.get(cat, 0) + 1
+    return counts
 
 
 def get_station_counts() -> dict[str, int]:

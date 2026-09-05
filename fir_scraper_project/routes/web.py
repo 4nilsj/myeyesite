@@ -3,9 +3,11 @@
 from flask import Blueprint, abort, render_template, request, send_from_directory
 
 from core import config
+from core.classifier import CRIME_CATEGORIES
 from core.config import STATION_MAP, _highlight_matches
 from core.extractor import get_pdf_info_cached
 from core.repository import (
+    get_category_counts,
     get_highest_firs_summary,
     get_station_counts,
     get_station_stats,
@@ -21,6 +23,7 @@ def index():
     tq = request.args.get("tq", "").strip()
     date_order = request.args.get("date_order", "fir_desc").strip().lower()
     station_id = request.args.get("station_id", "").strip()
+    category = request.args.get("category", "").strip()
 
     start_fir_raw = request.args.get("start_fir", "").strip()
     end_fir_raw = request.args.get("end_fir", "").strip()
@@ -28,10 +31,12 @@ def index():
     start_fir = int(start_fir_raw) if start_fir_raw.isdigit() else None
     end_fir = int(end_fir_raw) if end_fir_raw.isdigit() else None
 
-    records = list_pdfs(query, tq, date_order, station_id, start_fir, end_fir)
+    records = list_pdfs(query, tq, date_order, station_id, start_fir, end_fir, category=category)
     station_counts = get_station_counts()
     station_stats = get_station_stats()
     highest_firs = get_highest_firs_summary()
+    category_counts = get_category_counts(station_id=station_id)
+
     return render_template(
         "index.html",
         records=records,
@@ -39,12 +44,15 @@ def index():
         tq=tq,
         date_order=date_order,
         station_id=station_id,
+        category=category,
         start_fir=start_fir,
         end_fir=end_fir,
         station_map=STATION_MAP,
         station_counts=station_counts,
         station_stats=station_stats,
         highest_firs=highest_firs,
+        category_counts=category_counts,
+        crime_categories=CRIME_CATEGORIES,
     )
 
 
