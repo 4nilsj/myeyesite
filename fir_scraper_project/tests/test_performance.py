@@ -137,6 +137,45 @@ class TestPerformanceAndIndexing(unittest.TestCase):
             ],
         )
 
+    def test_crime_category_filtering(self):
+        """Verify list_pdfs filters records by crime category."""
+        theft_rec = {
+            "name": "fir_ps717_0001.pdf",
+            "station_id": "717",
+            "acts_sections": "303 BNS",
+            "summary": "Stolen bike",
+            "plain_summary": "Stolen bike",
+        }
+        cyber_rec = {
+            "name": "fir_ps2256_0001.pdf",
+            "station_id": "2256",
+            "acts_sections": "66D IT Act",
+            "summary": "Online fraud",
+            "plain_summary": "Online fraud",
+        }
+        murder_rec = {
+            "name": "fir_ps718_0001.pdf",
+            "station_id": "718",
+            "acts_sections": "103 BNS",
+            "summary": "Homicide incident",
+            "plain_summary": "Homicide incident",
+        }
+        _save_record_to_db(theft_rec, mtime=1700000000, size=10000)
+        _save_record_to_db(cyber_rec, mtime=1700000000, size=10000)
+        _save_record_to_db(murder_rec, mtime=1700000000, size=10000)
+
+        thefts = list_pdfs(category="Theft")
+        self.assertEqual(len(thefts), 1)
+        self.assertEqual(thefts[0]["name"], "fir_ps717_0001.pdf")
+
+        cybers = list_pdfs(category="Cyber Scam")
+        self.assertEqual(len(cybers), 1)
+        self.assertEqual(cybers[0]["name"], "fir_ps2256_0001.pdf")
+
+        murders = list_pdfs(category="Murder")
+        self.assertEqual(len(murders), 1)
+        self.assertEqual(murders[0]["name"], "fir_ps718_0001.pdf")
+
 
 if __name__ == "__main__":
     unittest.main()
