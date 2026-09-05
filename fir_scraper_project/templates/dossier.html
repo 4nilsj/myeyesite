@@ -30,8 +30,10 @@
         padding: 30px 20px;
       }
       .dossier-wrapper {
-        max-width: 1120px;
+        width: 100%;
+        max-width: 1000px;
         margin: 0 auto;
+        box-sizing: border-box;
       }
 
       /* Screen Toolbar */
@@ -372,52 +374,56 @@
           </div>
 
           <div class="section-heading">1. Statutory Acts &amp; Legal Sections Applied</div>
-          <table class="dossier-table">
-            <thead>
-              <tr>
-                <th style="width: 25%;">Offence Type</th>
-                <th style="width: 50%;">Statutory Sections Applied (BNS / IPC / Special Acts)</th>
-                <th style="width: 25%;">Jurisdiction / Taluk</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>{{ ctype }}</strong></td>
-                <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #1e3a8a;">
-                  {{ record.acts_sections or 'Sections not explicitly specified in digitized text.' }}
-                </td>
-                <td>{{ record.tq or 'Not specified' }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="dossier-table-container">
+            <table class="dossier-table">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Offence Type</th>
+                  <th style="width: 50%;">Statutory Sections Applied (BNS / IPC / Special Acts)</th>
+                  <th style="width: 25%;">Jurisdiction / Taluk</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>{{ ctype }}</strong></td>
+                  <td style="font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; color: #1e3a8a;">
+                    {{ record.acts_sections or 'Sections not explicitly specified in digitized text.' }}
+                  </td>
+                  <td>{{ record.tq or 'Not specified' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <div class="section-heading">2. Involved Parties Registry</div>
-          <table class="dossier-table">
-            <thead>
-              <tr>
-                <th style="width: 20%;">Role</th>
-                <th style="width: 40%;">Name / Identification</th>
-                <th style="width: 40%;">Address / Contact Details</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong style="color: #047857;">Complainant</strong></td>
-                <td><strong>{{ record.complainant_name or 'Not clearly recorded' }}</strong></td>
-                <td>{{ record.complainant_address or 'Address not clearly found' }}</td>
-              </tr>
-              <tr>
-                <td><strong style="color: #b91c1c;">Accused / Suspect</strong></td>
-                <td><strong>{{ record.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</strong></td>
-                <td>{{ record.accused_address or 'Address not clearly found' }}</td>
-              </tr>
-              <tr>
-                <td><strong style="color: #4338ca;">Victim</strong></td>
-                <td>{{ record.victim_name or 'Same as complainant / Not recorded' }}</td>
-                <td>{{ record.victim_address or '—' }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="dossier-table-container">
+            <table class="dossier-table">
+              <thead>
+                <tr>
+                  <th style="width: 20%;">Role</th>
+                  <th style="width: 40%;">Name / Identification</th>
+                  <th style="width: 40%;">Address / Contact Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong style="color: #047857;">Complainant</strong></td>
+                  <td><strong>{{ record.complainant_name or 'Not clearly recorded' }}</strong></td>
+                  <td>{{ record.complainant_address or 'Address not clearly found' }}</td>
+                </tr>
+                <tr>
+                  <td><strong style="color: #b91c1c;">Accused / Suspect</strong></td>
+                  <td><strong>{{ record.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</strong></td>
+                  <td>{{ record.accused_address or 'Address not clearly found' }}</td>
+                </tr>
+                <tr>
+                  <td><strong style="color: #4338ca;">Victim</strong></td>
+                  <td>{{ record.victim_name or 'Same as complainant / Not recorded' }}</td>
+                  <td>{{ record.victim_address or '—' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <div class="section-heading">3. Incident Location &amp; Place of Occurrence</div>
           <div class="meta-grid" style="margin-bottom: 18px;">
