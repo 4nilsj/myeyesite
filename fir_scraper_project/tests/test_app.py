@@ -121,7 +121,8 @@ class TestFlaskApp(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Start FIR number cannot be greater than End FIR number", response.data)
 
-    def test_extract_new_firs_post(self):
+    @unittest.mock.patch("routes.api._async_scrape_worker")
+    def test_extract_new_firs_post(self, mock_worker):
         response = self.client.post(
             "/extract_new_firs",
             data={"station_id": "717", "batch_size": "5"},

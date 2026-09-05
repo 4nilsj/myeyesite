@@ -56,8 +56,6 @@ class TestExportAndDossier(unittest.TestCase):
             "acts_sections": "303 BNS",
             "text": "Full complaint text for motorcycle theft",
         }
-        _save_record_to_db(self.sample_record, mtime=1700000000, size=350000)
-
         # Create physical dummy PDF so single dossier / pdf detail tests find it
         dummy_pdf_path = self.test_pdf_dir / "fir_ps717_0001.pdf"
         doc = fitz.open()
@@ -65,6 +63,9 @@ class TestExportAndDossier(unittest.TestCase):
         page.insert_text((50, 50), "Dummy FIR PDF Content")
         doc.save(str(dummy_pdf_path))
         doc.close()
+
+        stat = dummy_pdf_path.stat()
+        _save_record_to_db(self.sample_record, mtime=int(stat.st_mtime), size=stat.st_size)
 
         app.app.config["TESTING"] = True
         self.client = app.app.test_client()
