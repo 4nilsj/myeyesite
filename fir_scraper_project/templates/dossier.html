@@ -400,32 +400,100 @@
             <table class="dossier-table">
               <thead>
                 <tr>
-                  <th style="width: 20%;">Role</th>
-                  <th style="width: 40%;">Name / Identification</th>
-                  <th style="width: 40%;">Address / Contact Details</th>
+                  <th style="width: 22%;">Role</th>
+                  <th style="width: 42%;">Name / Identification</th>
+                  <th style="width: 36%;">Address / Contact Details</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td><strong style="color: #047857;">Complainant</strong></td>
-                  <td><strong>{{ record.complainant_name or 'Not clearly recorded' }}</strong></td>
-                  <td>{{ record.complainant_address or 'Address not clearly found' }}</td>
+                  <td><strong style="color: #047857;">Complainant / Informant</strong></td>
+                  <td>
+                    <div style="font-weight: 700; font-size: 0.95rem; color: #0f172a;">
+                      {{ (dossier.complainant.name if dossier and dossier.complainant else None) or record.complainant_name or 'Not clearly recorded' }}
+                    </div>
+                    {% if dossier and dossier.complainant.father_spouse %}
+                      <div style="font-size: 0.78rem; color: #475569; margin-top: 3px;">
+                        <strong>Father / Spouse:</strong> {{ dossier.complainant.father_spouse }}
+                      </div>
+                    {% endif %}
+                    {% if dossier and (dossier.complainant.age or dossier.complainant.gender) %}
+                      <div style="font-size: 0.78rem; color: #475569; margin-top: 2px;">
+                        {% if dossier.complainant.age %}<strong>Age:</strong> {{ dossier.complainant.age }} yrs{% endif %}
+                        {% if dossier.complainant.gender %} | <strong>Gender:</strong> {{ dossier.complainant.gender }}{% endif %}
+                        {% if dossier.complainant.occupation %} | <strong>Occ:</strong> {{ dossier.complainant.occupation }}{% endif %}
+                      </div>
+                    {% endif %}
+                    {% if dossier and dossier.complainant.phone %}
+                      <div style="font-size: 0.78rem; color: #2563eb; margin-top: 3px;">
+                        <strong>📞 Phone:</strong> {{ dossier.complainant.phone }}
+                      </div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    <div>{{ (dossier.complainant.address if dossier and dossier.complainant else None) or record.complainant_address or 'Address not specified' }}</div>
+                    {% if dossier and dossier.complainant.eyewitness %}
+                      <div style="font-size: 0.75rem; color: #047857; margin-top: 4px;">
+                        ✓ <em>Eyewitness: {{ dossier.complainant.eyewitness }}</em>
+                      </div>
+                    {% endif %}
+                  </td>
                 </tr>
                 <tr>
-                  <td><strong style="color: #b91c1c;">Accused / Suspect</strong></td>
-                  <td><strong>{{ record.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</strong></td>
-                  <td>{{ record.accused_address or 'Address not clearly found' }}</td>
+                  <td><strong style="color: #b91c1c;">Accused / Suspect(s)</strong></td>
+                  <td>
+                    {% if dossier and dossier.accused_list %}
+                      {% for acc in dossier.accused_list %}
+                        <div style="margin-bottom: 6px;">
+                          <strong style="color: #991b1b;">{{ acc.name }}</strong>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <strong style="color: #991b1b;">{{ record.accused_name or 'Unknown / ಅಪರಿಚಿತ' }}</strong>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if dossier and dossier.accused_list %}
+                      {% for acc in dossier.accused_list %}
+                        <div style="font-size: 0.8rem; color: #475569;">
+                          {{ acc.details or record.accused_address or 'Address / details not known at time of registration' }}
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      {{ record.accused_address or 'Address not clearly found' }}
+                    {% endif %}
+                  </td>
                 </tr>
                 <tr>
-                  <td><strong style="color: #4338ca;">Victim</strong></td>
-                  <td>{{ record.victim_name or 'Same as complainant / Not recorded' }}</td>
-                  <td>{{ record.victim_address or '—' }}</td>
+                  <td><strong style="color: #4338ca;">Victim(s) / Aggrieved</strong></td>
+                  <td>
+                    {% if dossier and dossier.victim_list %}
+                      {% for vic in dossier.victim_list %}
+                        <div style="margin-bottom: 6px;">
+                          <strong>{{ vic.name }}</strong>
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      <strong>{{ record.victim_name or 'Same as complainant / State' }}</strong>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if dossier and dossier.victim_list %}
+                      {% for vic in dossier.victim_list %}
+                        <div style="font-size: 0.8rem; color: #475569;">
+                          {{ vic.details or record.victim_address or '—' }}
+                        </div>
+                      {% endfor %}
+                    {% else %}
+                      {{ record.victim_address or '—' }}
+                    {% endif %}
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          <div class="section-heading">3. Incident Location &amp; Place of Occurrence</div>
+          <div class="section-heading">3. Incident Location &amp; Occurrence Timing</div>
           <div class="meta-grid" style="margin-bottom: 18px;">
             <div class="meta-item" style="grid-column: span 2;">
               <span class="meta-label">Location / Landmark</span>
@@ -435,14 +503,82 @@
               <span class="meta-label">Taluk (TQ)</span>
               <span class="meta-value">{{ record.tq or '—' }}</span>
             </div>
+            {% if dossier and dossier.incident_meta.occurrence_datetime %}
+            <div class="meta-item" style="grid-column: span 2;">
+              <span class="meta-label">Date &amp; Time of Occurrence</span>
+              <span class="meta-value" style="color: #b45309;">📅 {{ dossier.incident_meta.occurrence_datetime }}</span>
+            </div>
+            {% endif %}
+            {% if dossier and dossier.incident_meta.ps_received_datetime %}
+            <div class="meta-item">
+              <span class="meta-label">Report Received at PS</span>
+              <span class="meta-value">🕒 {{ dossier.incident_meta.ps_received_datetime }}</span>
+            </div>
+            {% endif %}
+            {% if dossier and dossier.incident_meta.distance_from_ps %}
+            <div class="meta-item">
+              <span class="meta-label">Distance &amp; Direction from PS</span>
+              <span class="meta-value">{{ dossier.incident_meta.distance_from_ps }}</span>
+            </div>
+            {% endif %}
+            {% if dossier and dossier.incident_meta.village_beat %}
+            <div class="meta-item">
+              <span class="meta-label">Village &amp; Police Beat</span>
+              <span class="meta-value">{{ dossier.incident_meta.village_beat }}</span>
+            </div>
+            {% endif %}
+            {% if dossier and dossier.incident_meta.court_name %}
+            <div class="meta-item" style="grid-column: span 2;">
+              <span class="meta-label">Jurisdictional Magistrate / Court</span>
+              <span class="meta-value">⚖️ {{ dossier.incident_meta.court_name }}</span>
+            </div>
+            {% endif %}
           </div>
 
-          <div class="section-heading">4. Case Synopsis &amp; Narrative Brief</div>
-          <div class="narrative-box">
-{{ record.plain_summary or record.summary or 'No narrative text extracted.' }}
+          {% if dossier and dossier.property_items %}
+          <div class="section-heading">4. Properties &amp; Vehicles Stolen / Involved</div>
+          <div class="dossier-table-container">
+            <table class="dossier-table">
+              <thead>
+                <tr>
+                  <th style="width: 10%;">Item #</th>
+                  <th style="width: 25%;">Property / Vehicle Type</th>
+                  <th style="width: 45%;">Description &amp; Registration Particulars</th>
+                  <th style="width: 20%;">Estimated Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in dossier.property_items %}
+                <tr>
+                  <td><strong>#{{ item.sl }}</strong></td>
+                  <td>{{ item.type }}</td>
+                  <td><strong>{{ item.description }}</strong></td>
+                  <td style="font-weight: 700; color: #1e3a8a;">{{ item.value }}</td>
+                </tr>
+                {% endfor %}
+                {% if dossier.property_total_value %}
+                <tr style="background: #f8fafc; font-weight: 800;">
+                  <td colspan="3" style="text-align: right; text-transform: uppercase;">Total Estimated Property Value:</td>
+                  <td style="color: #b91c1c; font-size: 0.9rem;">₹ {{ dossier.property_total_value }}</td>
+                </tr>
+                {% endif %}
+              </tbody>
+            </table>
+          </div>
+          {% endif %}
+
+          <div class="section-heading">{% if dossier and dossier.property_items %}5{% else %}4{% endif %}. Verbatim First Information Report Statement (ಪ್ರಥಮ ವರ್ತಮಾನ ವರದಿಯ ವಿವರಗಳು)</div>
+          <div class="narrative-box" style="font-size: 0.88rem; line-height: 1.7; background: #ffffff; border: 1px solid #cbd5e1; border-left: 4px solid #1e3a8a;">
+            {% if dossier and dossier.fir_narrative %}
+              {{ dossier.fir_narrative }}
+            {% elif record.plain_summary %}
+              {{ record.plain_summary }}
+            {% else %}
+              {{ record.summary or 'No narrative text extracted.' }}
+            {% endif %}
           </div>
 
-          <div class="section-heading">5. Physical &amp; Digital Document Provenance</div>
+          <div class="section-heading">{% if dossier and dossier.property_items %}6{% else %}5{% endif %}. Physical &amp; Digital Document Provenance</div>
           <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 24px;">
             Document Size: <strong>{{ record.size_mb }} MB</strong> | Pages: <strong>{{ record.pages }}</strong> |
             OCR Mode: <strong>{% if record.ocr_used %}Tesseract Kannada/English OCR{% else %}Direct Digital Extraction{% endif %}</strong> |

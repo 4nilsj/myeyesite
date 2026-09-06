@@ -6,6 +6,7 @@ from flask import Blueprint, Response, abort, render_template, request
 
 from core import config
 from core.config import STATION_MAP
+from core.dossier_extractor import extract_rich_dossier_data
 from core.export import generate_csv_data, generate_excel_workbook
 from core.extractor import get_pdf_info_cached
 from core.repository import list_pdfs
@@ -121,9 +122,11 @@ def single_dossier(filename: str):
         abort(404)
 
     record = get_pdf_info_cached(pdf_path)
+    dossier = extract_rich_dossier_data(record)
     return render_template(
         "dossier.html",
         record=record,
+        dossier=dossier,
         single_mode=True,
     )
 

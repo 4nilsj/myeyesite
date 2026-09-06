@@ -123,6 +123,39 @@ class TestExportAndDossier(unittest.TestCase):
         self.assertIn(b"Ramesh Kumar", response.data)
         self.assertIn(b"Investigating Officer", response.data)
 
+    def test_extract_rich_dossier_data(self):
+        from core.dossier_extractor import extract_rich_dossier_data
+
+        sample = {
+            "complainant_name": "Liyakat Ahmad",
+            "complainant_address": "Pethshiroor",
+            "accused_name": "Unknown",
+            "victim_name": "Not clearly found",
+            "location": "Kalaburgi Sedam Road",
+            "tq": "kalagi",
+            "text": (
+                "3. (a) ಕೃತ್ಯ ನಡೆದ ದಿನ : Sunday ದಿನಾಂಕ ದಿಂದ : 06/06/2026 ದಿನಾಂಕ ವರೆಗೆ : 06/06/2026 ವೇಳೆಯಿಂದ : 21:00:00 ವೇಳೆಯವರೆಗೆ : 21:05:00\n"
+                "(b) ಠಾಣೆಯಲ್ಲಿ ವರ್ತಮಾನ ಸ್ವೀಕರಿಸಿದ ದಿನಾಂಕ : 07/06/2026 ಬರವಣಿಗೆಯಲ್ಲಿ/ಹೇಳಿಕೆ : Written 15:00:00\n"
+                "4. (b) ಪೊಲೀಸ್‌ಠಾಣೆ ಯಿಂದ ಇರುವ ದಿಕ್ಕು ಮತ್ತು ದೂರ : Towards East 4.000 Km Madbool PS\n"
+                "5. ಪಿರ್ಯಾದುದಾರ / ಬಾತ್ಮೀದಾರ : (a) ಹೆಸರು : Liyakat ahmad ತಂದೆ/ಗಂಡನ ಹೆಸರು : Rajaq patel (b) ವಯಸ್ಸು : 26 (g) ದೂರವಾಣಿ : 7795441438 (h) ಲಿಂಗ : Male\n"
+                "6. ಗೊತ್ತಿರುವ/ಅನುಮಾನಿತ /ಅಪರಿಚಿತ ವ್ಯಕ್ತಿಯ ಪೂರ್ತಿ ವಿವರಗಳು : ಹೆಸರು / ಸ.ನಂ 1 Driver of the XUV Car no KA32MA5210 (A1) Accused Adult Male\n"
+                "7. ನೊಂದವರ ವಿವರಗಳು : ಸ.ನಂ ಹೆಸರು 1 Smt Ayesha siddiq Grievous Female 23 Housewife\n"
+                "8. ಕಳುವಾಗಿರುವ / ಬಾಗಿಯಾಗಿರುವ ಸ್ವತ್ತುಗಳ ವಿವರಗಳು : 1 Other Property Lorry No KA32AA3076 300000.00 ಕಳುವಾಗಿರುವ / ಬಾಗಿಯಾಗಿರುವ ಸ್ವತ್ತುಗಳ ಮೌಲ್ಯ : 300000.00\n"
+                "10. ಪ್ರಥಮ ವರ್ತಮಾನ ವರದಿಯ ವಿವರಗಳು : Liyakat Ahmad reported that while traveling on Kalaburgi-Sedam road near Madbool cross an XUV car collided from behind.\n"
+                "11. ಕ್ರಮ ತೆಗೆದುಕೊಂಡ ಬಗ್ಗೆ ವಿವರ :"
+            ),
+        }
+        res = extract_rich_dossier_data(sample)
+        self.assertEqual(res["complainant"]["father_spouse"], "Rajaq patel")
+        self.assertEqual(res["complainant"]["age"], "26")
+        self.assertEqual(res["complainant"]["phone"], "7795441438")
+        self.assertIn("Sunday,", res["incident_meta"]["occurrence_datetime"])
+        self.assertIn("07/06/2026 at 15:00:00", res["incident_meta"]["ps_received_datetime"])
+        self.assertIn("Driver of the XUV Car", res["accused_list"][0]["name"])
+        self.assertIn("Smt Ayesha siddiq", res["victim_list"][0]["name"])
+        self.assertEqual(len(res["property_items"]), 1)
+        self.assertIn("Kalaburgi-Sedam", res["fir_narrative"])
+
 
 if __name__ == "__main__":
     unittest.main()
